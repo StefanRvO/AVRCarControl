@@ -44,12 +44,12 @@ RJMP    RECIVE
 IN      R18,UDR     ;SEND RECIVED TO R18
 ldi     R20,0x01    ;turn on recive led
 out     PORTA,R20
-mov     R19,R18
-CALL    SETPWM
-ldi     R20,0x00    ;turn off recive led
+mov     R19,R18     ;move recived to r19
+CALL    SETPWM      ;set pwm to recived value
+ldi     R20,0x00    
 CALL    DELAY             ;wait a bit
-out     PORTA,R20    
-ldi     R17,'S'
+out     PORTA,R20    ;turn off recive led
+ldi     R17,'S'     ;SEND SET+<recived-byte>
 CALL    TRANSMIT
 ldi     R17,'E'
 CALL    TRANSMIT
@@ -59,7 +59,7 @@ ldi     R17,' '
 CALL    TRANSMIT
 mov     R17,R18     ;Move recived to R17
 CALL    TRANSMIT
-RJMP    RECIVE
+RJMP    RECIVE      ;LOOP
 
 TRANSMIT: ;sends char in reg17
 ldi     R20,0x02    ;turn on transmit led
@@ -72,15 +72,15 @@ out     PORTA,R20
 RET                    ;Return
 
 SETPWM: ;Set PWM on PD7 to value in R19
-out     OCR2,R19
-ldi     R20,0x04    ;PWM diode view
+out     OCR2,R19    ;set pwm
+ldi     R20,0x04    ;PWM diode on
 out     PORTA,R20
 CALL    DELAY
 ldi     R20,0x00
-out     PORTA,R20
-RET
+out     PORTA,R20    ;pwm diode off
+RET                 ;return
 
-DELAY:
+DELAY:  ;Do a small delay
 ldi     R21,0xFF 
 DELAY2:
         DEC R21
