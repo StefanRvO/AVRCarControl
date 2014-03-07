@@ -52,17 +52,25 @@ RETI
 ;**************
 STATESET:
 CPI R16,0x55
-BRNE    STATESET1
+BRNE    PC+2
 CALL     SET
 STATESET1:
 CPI R16,0xAA
-BRNE    STATERET
+BRNE    PC+2
 CALL     GET
 STATERET:
 RET
 ;******************
 SET:
-out PORTB,R17
+CPI R17,0x10
+BRNE    PC+2
+CALL SETSPEED
+CPI R17,0x11
+BRNE    PC+2
+CALL STOP
+CPI R17,0x12
+BRNE    PC+2
+CALL AUTOMODE
 RET
 ;*********
 GET:
@@ -70,6 +78,7 @@ push    R17
 push    R18
 push    R19
 ldi     R17,0xBB
+ldi     R18,0x00
 in      R19,PORTB
 CALL    TRANSREPLY
 pop     R17
@@ -82,16 +91,29 @@ TRANSREPLY:  ;Sends the data in R17:R19
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY
 out     UDR,R17
-A:
+TRANSREPLY1:
 SBIS    UCSRA,UDRE
-RJMP    A
+RJMP    TRANSREPLY1
 out     UDR,R18
-B:
+TRANSREPLY2:
 SBIS    UCSRA,UDRE
-RJMP    B
+RJMP    TRANSREPLY2
 out     UDR,R19
 RET
 
+SETSPEED:
+nop
+out PORTB,R18
+RET ; SET motor speed dependent on R18 value
+
+STOP:
+ldi R18,0x00
+out PORTB,R18
+RET
+AUTOMODE:
+ldi R18,0xee ;testnumber
+out PORTB,R18
+RET
 ;******
 ;*MAIN
 ;******
