@@ -52,6 +52,13 @@ RET
 
 ;*************Set mode
 SET:
+;GET OUT OF INTERRUPT MODE, clear the stack 
+		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
+		out		SPH, R16                ;ANOTHER
+		ldi		R16, LOW(RAMEND)        ;SOLUTION
+		out		SPL, R16                ;IS NEEDED!!
+	    sei				
+;call specific loop
 CPI R17,0x10
 BRNE    PC+2
 CALL SETSPEED
@@ -98,17 +105,16 @@ RET
 SETSPEED:
 nop
 out PORTB,R18
-RET ; SET motor speed dependent on R18 value
+jmp Main ; SET motor speed dependent on R18 value
 
 STOP:
 ldi R18,0x00
 out PORTB,R18
-RET
+jmp Main
 AUTOMODE:
-ldi R18,0xee    ;testnumber Some hacks needed here 
-                ;to come out of interrupt???
+ldi R18,0xee   
 out PORTB,R18
-RET
+jmp AUTOMODE
 ;******
 ;*MAIN
 ;******
