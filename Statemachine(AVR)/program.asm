@@ -15,6 +15,7 @@ Reset:
 ;****
 ;ROUTINES
 ;****
+;******************* RECIVE INTERRUPT
 RX_ISR: ;We always recive 3 bytes, put them in R16:R18
 push    R16 ;Push  to stack
 push    R17
@@ -35,21 +36,8 @@ pop     R17
 pop     R16
 RETI
 
-;TRANSMIT:
-;sbis    UCSRA,UDRE
-;rjmp    TRANSMIT    ;wait for free line
-;out     UDR,R16
-;TX_WAIT2:
-;sbis    UCSRA,UDRE
-;rjmp    TX_WAIT2
-;out     UDR,R17
-;TX_WAIT3:
-;sbis    UCSRA,UDRE
-;rjmp    TX_WAIT3
-;out     UDR,R18
-;RET
 
-;**************
+;****************************CHANGE STATE
 STATESET:
 CPI R16,0x55
 BRNE    PC+2
@@ -61,6 +49,8 @@ CALL     GET
 STATERET:
 RET
 ;******************
+
+;*************Set mode
 SET:
 CPI R17,0x10
 BRNE    PC+2
@@ -73,19 +63,22 @@ BRNE    PC+2
 CALL AUTOMODE
 RET
 ;*********
+;****************GETMODE
 GET:
-push    R17
+push    R17         
 push    R18
 push    R19
 ldi     R17,0xBB
-ldi     R18,0x00
-in      R19,PORTB
+;****                   ;HERE WE SHOULD
+ldi     R18,0x00        ;FETCH THE WANTED 
+in      R19,PORTB       ;DATA
+;****                   ;
 CALL    TRANSREPLY
 pop     R17
 pop     R18
 pop     R19
 RET
-;******
+;******************
 
 TRANSREPLY:  ;Sends the data in R17:R19
 SBIS    UCSRA,UDRE
@@ -100,6 +93,7 @@ SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY2
 out     UDR,R19
 RET
+;***************
 
 SETSPEED:
 nop
@@ -111,7 +105,8 @@ ldi R18,0x00
 out PORTB,R18
 RET
 AUTOMODE:
-ldi R18,0xee ;testnumber
+ldi R18,0xee    ;testnumber Some hacks needed here 
+                ;to come out of interrupt???
 out PORTB,R18
 RET
 ;******
