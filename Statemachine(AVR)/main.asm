@@ -51,13 +51,7 @@ RET
 ;******************
 
 ;*************Set mode
-SET:
-;GET OUT OF INTERRUPT MODE, clear the stack 
-		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
-		out		SPH, R16                ;ANOTHER
-		ldi		R16, LOW(RAMEND)        ;SOLUTION
-		out		SPL, R16                ;IS NEEDED!!
-	    sei				
+SET:	
 ;call specific loop
 CPI R17,0x10
 BRNE    PC+2
@@ -103,15 +97,36 @@ RET
 ;***************
 
 SETSPEED:
+;GET OUT OF INTERRUPT MODE, clear the stack 
+		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
+		out		SPH, R16                ;ANOTHER
+		ldi		R16, LOW(RAMEND)        ;SOLUTION
+		out		SPL, R16                ;IS NEEDED!!
+	    sei		
+;*********
 nop
 out PORTB,R18
 jmp Main ; SET motor speed dependent on R18 value
 
 STOP:
+;GET OUT OF INTERRUPT MODE, clear the stack 
+		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
+		out		SPH, R16                ;ANOTHER
+		ldi		R16, LOW(RAMEND)        ;SOLUTION
+		out		SPL, R16                ;IS NEEDED!!
+	    sei		
+;*********
 ldi R18,0x00
 out PORTB,R18
 jmp Main
 AUTOMODE:
+;GET OUT OF INTERRUPT MODE, clear the stack 
+		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
+		out		SPH, R16                ;ANOTHER
+		ldi		R16, LOW(RAMEND)        ;SOLUTION
+		out		SPL, R16                ;IS NEEDED!!
+	    sei		
+;*********
 ldi R18,0xee   
 out PORTB,R18
 jmp AUTOMODE
