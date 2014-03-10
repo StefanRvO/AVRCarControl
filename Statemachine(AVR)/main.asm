@@ -1,4 +1,6 @@
-
+.equ T1_Counter = 0x250
+.equ TransMSG = 0x300
+.equ END_ = 0x00
 .include "m32def.inc"
 
 .org    0x0000
@@ -8,16 +10,36 @@ Reset:
 .include "SetupStack.asm"       ;setup the stack
 .include "SetupSerial16Mhz.asm"      ;setup serial connection
 .include "SetupIO.asm"
+.include "SetupTime.asm"
 
     sei                         ;enable interrupts
+    ldi R16,0x00
+    sts T1_Counter,R16  ;zero counter stuff
     jmp     Main
     
 ;****
 ;ROUTINES
 ;****
+
+;******************* Timer1 Overflow Interrupt
+T1_OVFLW:
+push    R16
+in      R16,SREG
+push    R16
+lds R16,T1_Counter
+inc     R16
+sts     T1_Counter,R16
+pop     R16
+out     SREG,R16
+pop     R16
+reti
+
+;*******************
 ;******************* RECIVE INTERRUPT
 RX_ISR: ;We always recive 3 bytes, put them in R16:R18
 push    R16 ;Push  to stack
+in      R16,SREG
+push    R16
 push    R17
 push    R18
 in      R16,UDR ;read recived into R16
@@ -33,6 +55,8 @@ in    R18,UDR   ;Read into R18
 CALL STATESET
 pop     R18
 pop     R17
+pop     R16
+out      SREG,R16
 pop     R16
 RETI
 
@@ -66,22 +90,72 @@ RET
 ;*********
 ;****************GETMODE
 GET:
-push    R20        
-push    R21
-push    R22
-ldi     R20,0xBB
-;****                   ;HERE WE SHOULD
-ldi     R21,0x00        ;FETCH THE WANTED 
-in      R22,OCR2       ;DATA
-;****                   ;
-CALL    TRANSREPLY
-pop     R20
-pop     R21
-pop     R22
+cpi R17,0x10 ;Get speed
+brne    PC+2
+CALL GETSPEED
+cpi R17,0x11 ;Get stop
+brne    PC+2
+CALL GETSTOP
+cpi R17,0x12    ;Get automode
+brne    PC+2
+CALL GETAUTOMODE
+cpi R17,0x13    ;Get timer status
+brne PC+2
+CALL    GETTIME
 RET
 ;******************
+GETSPEED:
+push R20
+push R21
+ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
+ldi ZL,low(TransMSG<<1)
+in  R20,OCR2
+ST  Z+,R20
+ldi R20,END_
+ST  Z+,R20
+ldi R20,0xBB
+ldi R21,0x10
+call TRANSREPLY
+pop R21
+pop R22
+ret
 
-TRANSREPLY:  ;Sends the data in R20:R22
+GETSTOP:
+nop ;Does nothing ATM
+ret
+
+GETAUTOMODE:
+nop ;Does nothing ATM
+ret
+GETTIME: ;Send the speed
+push R20
+push R21
+push R22
+;fetch clock
+in   R20,TCNT1L ;Timer 1 low
+lds  R22,T1_Counter     ;what if timer overflows while in interrupt?
+in  R21,TIFR
+SBRS    R21,TOV1 ;Increment R22 if we have a overflow
+inc R22 
+in   R21,TCNT1H ;Timer 1 high 
+;fetch done
+;Put Time in TransMSG
+ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
+ldi ZL,low(TransMSG<<1)
+ST  Z+,R22
+ST  Z+,R21
+ST  Z+,R20
+ldi R22,END_
+ST  Z+,R22
+ldi  R20,0xBB ;Respond header
+ldi  R21,0x13
+call    TRANSREPLY
+pop R22
+pop R21
+pop R20
+ret
+
+TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x300 to (before)end_(0x00)
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY
 out     UDR,R20
@@ -89,10 +163,19 @@ TRANSREPLY1:
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY1
 out     UDR,R21
-TRANSREPLY2:
+ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
+ldi ZL,low(TransMSG<<1)
+push R22
+TRANSREPLYloop:
 SBIS    UCSRA,UDRE
-RJMP    TRANSREPLY2
+RJMP    TRANSREPLYloop
+lpm     R22,Z+
+cpi     R22,END_
+breq    TRANSREPLYEXIT
 out     UDR,R22
+rjmp    TRANSREPLYloop
+TRANSREPLYEXIT:
+pop R22
 RET
 ;***************
 
