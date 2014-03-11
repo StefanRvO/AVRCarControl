@@ -248,18 +248,6 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
-SBI ADCSRA,ADSC
-waitmain:
-SBIS ADCSRA,ADIF ;is adc done?
-rjmp    waitmain
-SBI ADCSRA,ADIF ;clear ADIF
-push R20
-push R21
-in R20,ADCL
-in R21,ADCH
-out PORTB,R21
-pop R21
-pop R20
 RJMP    Main
 
 
