@@ -1,6 +1,6 @@
 .equ T1_Counter = 0x250
 .equ TransMSG = 0x300
-.equ END_ = 0x00
+.equ END_ = 0xFF
 .include "m32def.inc"
 
 .org    0x0000
@@ -8,9 +8,10 @@
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial16Mhz.asm"      ;setup serial connection
+.include "SetupSerial.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
+.include "SetupADC.asm"
 
     sei                         ;enable interrupts
     ldi R16,0x00
@@ -26,7 +27,7 @@ T1_OVFLW:
 push    R16
 in      R16,SREG
 push    R16
-lds R16,T1_Counter
+lds     R16,T1_Counter
 inc     R16
 sts     T1_Counter,R16
 pop     R16
@@ -102,6 +103,9 @@ CALL GETAUTOMODE
 cpi R17,0x13    ;Get timer status
 brne PC+2
 CALL    GETTIME
+cpi R17,0x14
+brne PC+2
+call    GETACCEL
 RET
 ;******************
 GETSPEED:
@@ -127,35 +131,60 @@ ret
 GETAUTOMODE:
 nop ;Does nothing ATM
 ret
-GETTIME: ;Send the speed
+
+GETACCEL: ;Read adc at PA0
+SBI ADCSRA,ADSC ;start conversion
 push R20
 push R21
-push R22
-;fetch clock
-in   R20,TCNT1L ;Timer 1 low
-lds  R22,T1_Counter     ;what if timer overflows while in interrupt?
-in  R21,TIFR
-SBRS    R21,TOV1 ;Increment R22 if we have a overflow
-inc R22 
-in   R21,TCNT1H ;Timer 1 high 
-;fetch done
-;Put Time in TransMSG
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
-ST  Z+,R22
-ST  Z+,R21
-ST  Z+,R20
-ldi R22,END_
-ST  Z+,R22
-ldi  R20,0xBB ;Respond header
-ldi  R21,0x13
-call    TRANSREPLY
-pop R22
+WAITADC:
+SBIS ADCSRA,ADIF ;is adc done?
+rjmp    WAITADC
+in R20,ADCL
+in R21,ADCH
+out PORTB,R21 ;Put value (first 8 bit) on port b (for debugging..?)
+ST  Z+,R21 
+ST  Z+,R20         ;         ; Put in RAM for transfer
+ldi R20,END_        ;
+ST  Z+,R20          ;
+ldi R20,0xBB ;Response headers
+ldi R21,0x14
+CALL TRANSREPLY
 pop R21
 pop R20
-ret
+RET
 
-TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x300 to (before)end_(0x00)
+
+GETTIME: ;Send the speed
+    push R20
+    push R21
+    push R22
+    ;fetch clock
+    in   R20,TCNT1L ;Timer 1 low
+    lds  R22,T1_Counter     ;what if timer overflows while in interrupt?
+    in  R21,TIFR
+    SBRS    R21,TOV1 ;Increment R22 if we have a overflow
+    inc R22 
+    in   R21,TCNT1H ;Timer 1 high 
+    ;fetch done
+    ;Put Time in TransMSG
+    ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
+    ldi ZL,low(TransMSG<<1)
+    ST  Z+,R22
+    ST  Z+,R21
+    ST  Z+,R20
+    ldi R22,END_
+    ST  Z+,R22
+    ldi  R20,0xBB ;Respond header
+    ldi  R21,0x13
+    call    TRANSREPLY
+    pop R22
+    pop R21
+    pop R20
+    ret
+
+TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x300 to (before)end_(0xff)
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY
 out     UDR,R20
@@ -169,7 +198,7 @@ push R22
 TRANSREPLYloop:
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLYloop
-lpm     R22,Z+
+ld     R22,Z+
 cpi     R22,END_
 breq    TRANSREPLYEXIT
 out     UDR,R22
@@ -219,6 +248,18 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
+SBI ADCSRA,ADSC
+waitmain:
+SBIS ADCSRA,ADIF ;is adc done?
+rjmp    waitmain
+SBI ADCSRA,ADIF ;clear ADIF
+push R20
+push R21
+in R20,ADCL
+in R21,ADCH
+out PORTB,R21
+pop R21
+pop R20
 RJMP    Main
 
 

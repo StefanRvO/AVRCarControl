@@ -102,6 +102,7 @@
 .equ	ACSR	=$08
 .equ    ADMUX   =$07
 .equ    ADCSR   =$06
+.equ	ADCSRA	= 0x06
 .equ    ADCH    =$05
 .equ    ADCL    =$04
 .equ    TWDR    =$03
