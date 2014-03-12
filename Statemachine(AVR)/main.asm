@@ -1,5 +1,8 @@
-.equ T1_Counter = 0x250
-.equ TransMSG = 0x300
+.equ T1_Counter1 = 0x250
+.equ T1_Counter2 = 0x251
+.equ T1_Counter3 = 0x252
+.equ TransNum =0x300
+.equ TransMSG = 0x301
 .equ END_ = 0xFF
 .include "m32def.inc"
 
@@ -15,7 +18,10 @@ Reset:
 
     sei                         ;enable interrupts
     ldi R16,0x00
-    sts T1_Counter,R16  ;zero counter stuff
+    sts TransNum,R16
+    sts T1_Counter1,R16  ;zero counter stuff
+    sts T1_Counter2,R16  ;zero counter stuff
+    sts T1_Counter3,R16  ;zero counter stuff
     jmp     Main
     
 ;****
@@ -27,9 +33,20 @@ T1_OVFLW:
 push    R16
 in      R16,SREG
 push    R16
-lds     R16,T1_Counter
+lds     R16,T1_Counter1
 inc     R16
-sts     T1_Counter,R16
+sts     T1_Counter1,R16
+cpi     R16,0x00
+BRNE    T1_OVFLW_END
+lds     R16,T1_Counter2
+inc     R16
+sts     T1_Counter2,R16
+cpi     R16,0x00
+BRNE    T1_OVFLW_END
+lds     R16,T1_Counter3
+inc     R16
+sts     T1_Counter3,R16 
+T1_OVFLW_END:
 pop     R16
 out     SREG,R16
 pop     R16
@@ -115,8 +132,8 @@ ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
 in  R20,OCR2
 ST  Z+,R20
-ldi R20,END_
-ST  Z+,R20
+ldi R20,1
+sts  TransNum,R20
 ldi R20,0xBB
 ldi R21,0x10
 call TRANSREPLY
@@ -146,8 +163,8 @@ in R21,ADCH
 out PORTB,R21 ;Put value (first 8 bit) on port b (for debugging..?)
 ST  Z+,R21 
 ST  Z+,R20         ;         ; Put in RAM for transfer
-ldi R20,END_        ;
-ST  Z+,R20          ;
+ldi R20,2        ;
+sts  TransNum,R20          ;
 ldi R20,0xBB ;Response headers
 ldi R21,0x14
 CALL TRANSREPLY
@@ -160,31 +177,47 @@ GETTIME: ;Send the speed
     push R20
     push R21
     push R22
+    push R23
+    push R24
+    CLC     ;Clear carry flag
     ;fetch clock
     in   R20,TCNT1L ;Timer 1 low
-    lds  R22,T1_Counter     ;what if timer overflows while in interrupt?
+    lds  R22,T1_Counter1     ;what if timer overflows while in interrupt?
+    lds  R23,T1_Counter2
+    lds  R24,T1_Counter3
     in  R21,TIFR
     SBRS    R21,TOV1 ;Increment R22 if we have a overflow
-    inc R22 
+    inc R22
+    cpi R22,0x00
+    BRNE    END_INC_GETTIME
+    inc R23
+    cpi R23,0x00
+    BRNE    END_INC_GETTIME
+    inc R24
+    END_INC_GETTIME: 
     in   R21,TCNT1H ;Timer 1 high 
     ;fetch done
     ;Put Time in TransMSG
     ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
     ldi ZL,low(TransMSG<<1)
+    ST  Z+,R24
+    ST  Z+,R23
     ST  Z+,R22
     ST  Z+,R21
     ST  Z+,R20
-    ldi R22,END_
-    ST  Z+,R22
+    ldi  R20,5
+    sts  TransNum,R20
     ldi  R20,0xBB ;Respond header
     ldi  R21,0x13
     call    TRANSREPLY
+    pop R24
+    pop R23
     pop R22
     pop R21
     pop R20
     ret
 
-TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x300 to (before)end_(0xff)
+TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x301 and forward the number of bytes in 0x300
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY
 out     UDR,R20
@@ -195,15 +228,19 @@ out     UDR,R21
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
 push R22
+push R23
+lds R23,TransNum
+inc R23 ;Need to inc to get correct count
 TRANSREPLYloop:
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLYloop
+dec    R23
+BREQ   TRANSREPLYEXIT
 ld     R22,Z+
-cpi     R22,END_
-breq    TRANSREPLYEXIT
 out     UDR,R22
 rjmp    TRANSREPLYloop
 TRANSREPLYEXIT:
+pop R23
 pop R22
 RET
 ;***************
@@ -248,6 +285,7 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
+CALL GETACCEL
 RJMP    Main
 
 
