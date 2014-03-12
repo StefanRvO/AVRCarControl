@@ -36,12 +36,11 @@ push    R16
 lds     R16,T1_Counter1
 inc     R16
 sts     T1_Counter1,R16
-cpi     R16,0x00
 BRNE    T1_OVFLW_END
 lds     R16,T1_Counter2
 inc     R16
 sts     T1_Counter2,R16
-cpi     R16,0x00
+out     PORTB,R16
 BRNE    T1_OVFLW_END
 lds     R16,T1_Counter3
 inc     R16
@@ -285,7 +284,6 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
-CALL GETACCEL
 RJMP    Main
 
 
