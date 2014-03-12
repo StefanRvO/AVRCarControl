@@ -16,6 +16,7 @@ FONTUSED = "Times New Roman"
 TEXTSIZE=20
 FLAGS=0
 CIRCLECOLOR=(0,0,255)
+LABELCOLOR=(70,180,255)
 def MakeCopy(List):
     newlist=[]
     for i in range(len(List)):
@@ -53,8 +54,30 @@ def DrawGraphPaused(PausedDATA):
     pygame.draw.line(screen,AXISCOLOR,(SCREENSIZE[0]/2,0),(SCREENSIZE[0]/2,SCREENSIZE[1]),2)
     #Draw time on x-axis
     text=RAWFont.render(str(Timespan)+" ms",True,AXISCOLOR)
-    #Draw timetext
-    screen.blit(text,(5,(SCREENSIZE[1]+text.get_height())/2))
+    
+    #Draw time on x-axis
+    labelsx=3
+    for i in range(labelsx):
+        for j in [1,-1]:
+            Current=int(SCREENSIZE[0]/2+SCREENSIZE[0]/(2*(labelsx-1))*0.90*i*j)
+            #print(Current)
+            #print(Current)
+            #Draw "slip"
+            pygame.draw.line(screen,AXISCOLOR,(Current,SCREENSIZE[1]/2-5),(Current,SCREENSIZE[1]/2+5),3)
+            #Draw time
+            if not(len(TimeList)-1<Current):
+                text=RAWFont.render(str(TimeList[Current]-CurrentTime)+" ms",True,LABELCOLOR)
+                screen.blit(text,(Current-text.get_width()/2,SCREENSIZE[1]/2+text.get_height()*0.5))
+            if i==0:
+                break
+    
+    #Draw labels on y
+    pygame.draw.line(screen,AXISCOLOR,(SCREENSIZE[0]/2+5,SCREENSIZE[1]/4*3),(SCREENSIZE[0]/2-5,SCREENSIZE[1]/4*3),3)
+    pygame.draw.line(screen,AXISCOLOR,(SCREENSIZE[0]/2+5,SCREENSIZE[1]/4*1),(SCREENSIZE[0]/2-5,SCREENSIZE[1]/4*1),3)
+    text=RAWFont.render(str(1023/4*1),True,LABELCOLOR)
+    screen.blit(text,(SCREENSIZE[0]/2+text.get_width()/2,SCREENSIZE[1]/4*3-text.get_height()/2))
+    text=RAWFont.render(str(1023/4*3),True,LABELCOLOR)
+    screen.blit(text,(SCREENSIZE[0]/2+text.get_width()/2,SCREENSIZE[1]/4*1-text.get_height()/2))
     #Draw data
     pygame.draw.lines(screen,LINECOLOR,False,Data,2)
     #Draw circle in selected pos
@@ -75,7 +98,9 @@ def DrawGraphPaused(PausedDATA):
     pygame.display.flip()
     return 0    
 
-def DrawGraph(Data,Time,CurrentTime,LastReading):
+def DrawGraph(Data,TimeList,LastReading):
+    CurrentTime=TimeList[-1]
+    Time=TimeList[0]
     Timespan=Time-CurrentTime
     screen.fill(BACKGROUNDCOLOR)
     #Draw x-asix
@@ -83,9 +108,28 @@ def DrawGraph(Data,Time,CurrentTime,LastReading):
     #Draw y-axis
     pygame.draw.line(screen,AXISCOLOR,(SCREENSIZE[0]/2,0),(SCREENSIZE[0]/2,SCREENSIZE[1]),2)
     #Draw time on x-axis
-    text=RAWFont.render(str(Timespan)+" ms",True,AXISCOLOR)
-    #Draw timetext
-    screen.blit(text,(5,(SCREENSIZE[1]+text.get_height())/2))
+    labelsx=3
+    for i in range(labelsx):
+        for j in [1,-1]:
+            Current=int(SCREENSIZE[0]/2+SCREENSIZE[0]/(2*(labelsx-1))*0.90*i*j)
+            #print(Current)
+            #print(Current)
+            #Draw "slip"
+            pygame.draw.line(screen,AXISCOLOR,(Current,SCREENSIZE[1]/2-5),(Current,SCREENSIZE[1]/2+5),3)
+            #Draw time
+            if not(len(TimeList)-1<Current):
+                text=RAWFont.render(str(TimeList[Current]-CurrentTime)+" ms",True,LABELCOLOR)
+                screen.blit(text,(Current-text.get_width()/2,SCREENSIZE[1]/2+text.get_height()*0.5))
+            if i==0:
+                break
+    
+    #Draw labels on y
+    pygame.draw.line(screen,AXISCOLOR,(SCREENSIZE[0]/2+5,SCREENSIZE[1]/4*3),(SCREENSIZE[0]/2-5,SCREENSIZE[1]/4*3),3)
+    pygame.draw.line(screen,AXISCOLOR,(SCREENSIZE[0]/2+5,SCREENSIZE[1]/4*1),(SCREENSIZE[0]/2-5,SCREENSIZE[1]/4*1),3)
+    text=RAWFont.render(str(1023/4*1),True,LABELCOLOR)
+    screen.blit(text,(SCREENSIZE[0]/2+text.get_width()/2,SCREENSIZE[1]/4*3-text.get_height()/2))
+    text=RAWFont.render(str(1023/4*3),True,LABELCOLOR)
+    screen.blit(text,(SCREENSIZE[0]/2+text.get_width()/2,SCREENSIZE[1]/4*1-text.get_height()/2))
     #Draw data
     pygame.draw.lines(screen,LINECOLOR,False,Data,2)
     #Write out current reading
@@ -174,7 +218,7 @@ while True:
     GraphData=list(zip(counter,Readings))
     if fpscounter%fpsadjust==0:
         if(mode==1):
-            DrawGraph(GraphData,TimeList[0],TimeList[-1],rawread)
+            DrawGraph(GraphData,TimeList,rawread)
             PausedDATA=DoEvents()
         elif (mode==2):
             DrawGraphPaused(PausedDATA)
