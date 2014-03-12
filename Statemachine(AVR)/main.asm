@@ -40,7 +40,7 @@ BRNE    T1_OVFLW_END
 lds     R16,T1_Counter2
 inc     R16
 sts     T1_Counter2,R16
-out     PORTB,R16
+;out     PORTB,R16 ;Debugger
 BRNE    T1_OVFLW_END
 lds     R16,T1_Counter3
 inc     R16
@@ -159,7 +159,7 @@ SBIS ADCSRA,ADIF ;is adc done?
 rjmp    WAITADC
 in R20,ADCL
 in R21,ADCH
-out PORTB,R21 ;Put value (first 8 bit) on port b (for debugging..?)
+;out PORTB,R21 ;Put value (first 8 bit) on port b (for debugging..?)
 ST  Z+,R21 
 ST  Z+,R20         ;         ; Put in RAM for transfer
 ldi R20,2        ;
@@ -284,6 +284,7 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
+CALL GETACCEL
 RJMP    Main
 
 
