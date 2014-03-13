@@ -24,7 +24,8 @@ def MakeCopy(List):
         newlist.append(List[i])
     return newlist
     
-def GetReading():
+def GetReading(LastReadings):
+
     try:
         reading=[]
         while len(reading)<4:                     
@@ -37,14 +38,20 @@ def GetReading():
                     continue
                 else:
                     reading.append(rawin)
-        reading[2]=(reading[2]<<2) | reading[3]>>6        
-        return reading[2]
+        reading[2]=(reading[2]<<2) | reading[3]>>6
+        
+        if len(LastReadings)<moving-1 or moving==1:        
+            return [reading[2],reading[2]]
+        else:
+            #Make average over last <moving> readings and return the average
+            LastReadings.append(reading[2])
+            return [float(sum(LastReadings))/len(LastReadings),reading[2]]
     except IOError:
         pygame.time.wait(4)
-        return(511)
+        return([511,511])
         
     
-def DrawGraphPaused(Data,TimeList,LastReading):
+def DrawGraphPaused(Data,TimeList,LastReading,StartTime,RawReadings):
     NData=[[x,x] for x in range(len(Data))]
     for i in range(len(Data)):
         NData[i]=[Data[i][0]-Data[0][0],Data[i][1]]
@@ -93,20 +100,23 @@ def DrawGraphPaused(Data,TimeList,LastReading):
         pygame.draw.circle(screen,CIRCLECOLOR,(MouseX,int(Data[MouseX][1])),6)
         text=RAWFont.render("Selected Time="+str(TimeList[MouseX]-CurrentTime)+" ms",True,CIRCLECOLOR)
         screen.blit(text,(5,SCREENSIZE[1]-text.get_height()))
-        text=RAWFont.render("Selected Value="+str(RawReadings[MouseX]),True,CIRCLECOLOR)
+        text=RAWFont.render("Selected Value="+str(RawReadings[MouseX+moving*2]),True,CIRCLECOLOR)
         screen.blit(text,(5,SCREENSIZE[1]-text.get_height()*2))
     
     #Write out current reading
-    text=RAWFont.render("Input="+str(LastReading),True,TEXTCOLORRAW)
+    text=RAWFont.render("Input= Mov: "+str(LastReading[0])+" Real: "+str(LastReading[1]),True,TEXTCOLORRAW)
     screen.blit(text,(SCREENSIZE[0]-text.get_width()-5,text.get_height()))
     #Write out Current time #For logging etc.
-    text=RAWFont.render("Total Time ="+str(CurrentTime)+" ms",True,TEXTCOLORRAW)
+    text=RAWFont.render("Total Time ="+str(pygame.time.get_ticks()-StartTime)+" ms",True,TEXTCOLORRAW)
     screen.blit(text,(5,text.get_height()))
+    #Write out time for the viewed measurement (last time)
+    text=RAWFont.render("Current Time ="+str(CurrentTime-StartTime)+" ms",True,(122,122,122))
+    screen.blit(text,(5,text.get_height()*2))
     #View on screen
     pygame.display.flip()
     return 0    
 
-def DrawGraph(Data,TimeList,LastReading):
+def DrawGraph(Data,TimeList,LastReading,StartTime):
     NData=[x for x in range(len(Data))*2]
     for i in range(len(Data)):
         NData[i]=[Data[i][0]-Data[0][0],Data[i][1]]
@@ -145,10 +155,10 @@ def DrawGraph(Data,TimeList,LastReading):
     #Draw data
     pygame.draw.lines(screen,LINECOLOR,False,Data,2)
     #Write out current reading
-    text=RAWFont.render("Input="+str(LastReading),True,TEXTCOLORRAW)
+    text=RAWFont.render("Input= Mov: "+str(LastReading[0])+" Real: "+str(LastReading[1]),True,TEXTCOLORRAW)
     screen.blit(text,(SCREENSIZE[0]-text.get_width()-5,text.get_height()))
     #Write out Current time #For logging etc.
-    text=RAWFont.render("Total Time ="+str(CurrentTime)+" ms",True,TEXTCOLORRAW)
+    text=RAWFont.render("Total Time ="+str(CurrentTime-StartTime)+" ms",True,TEXTCOLORRAW)
     screen.blit(text,(5,text.get_height()))
     #View on screen
     pygame.display.flip()
@@ -186,15 +196,43 @@ def DoEventsPaused():
 if len(sys.argv)<2:
     print("You must enter serial port")
     sys.exit()
+
+#get arguments
 if "-v" in sys.argv:
     VERBOSE=1
 else:
     VERBOSE=0
+moving=1
+if "-m" in sys.argv:
+    try:
+        moving=int(sys.argv[sys.argv.index("-m")+1])
+        if moving<=0:
+            print("Wrong arguments!!")
+            sys.exit()  
+    except:
+        print("Wrong arguments!!")
+        sys.exit()
+        
+
+
 portpath=sys.argv[1]
 serialport = Serial(port=portpath, baudrate=9600)
 if "-fscreen" in sys.argv:
     SCREENSIZE=(1366,768)
     FLAGS=pygame.FULLSCREEN
+MovingReadings=[]
+RawReadings=[]
+#prepare moving average
+for i in range(moving):
+    rawread=GetReading([])
+    RawReadings.append(rawread[1])
+    MovingReadings.append(rawread[0])
+    
+
+#Prepare to draw data
+Readings=[float(SCREENSIZE[1])-(MovingReadings[-1]/1023.)*float(SCREENSIZE[1])]
+counter=0
+counterlist=[counter]
 
 #Setup pygame
 pygame.init()
@@ -202,50 +240,56 @@ screen=pygame.display.set_mode(SCREENSIZE,FLAGS,32)
 clock=pygame.time.Clock()
 fpscounter=1
 fpsadjust=5
-Readings=[float(SCREENSIZE[1])-(GetReading()/1023.)*float(SCREENSIZE[1])]
-RawReadings=[GetReading()]
-counterlist=[0]
-counter=0
 #Setup fonts
 RAWFont=pygame.font.SysFont(FONTUSED,TEXTSIZE)
+
 TimeList=[pygame.time.get_ticks()]
 mode=1
 PausedData=0
 GraphData=[]
+pagewait=0
 while True:
     counter+=1
     fpscounter+=1
-    rawread=GetReading()
+    RawReadings=RawReadings[-(moving-1):]
+    rawread=GetReading(RawReadings)
     TimeList.append(pygame.time.get_ticks())
     if VERBOSE:
-        print(str(rawread)+"\t"+str(TimeList[-1]))
-    Readings.append(float(SCREENSIZE[1])-(rawread/1023.)*float(SCREENSIZE[1]))
-    RawReadings.append(rawread)
+        print(str(rawread[0])+"\t"+str(rawread[1])+"\t"+str(TimeList[-1]-TimeList[0]))
+    Readings.append(float(SCREENSIZE[1])-(rawread[0]/1023.)*float(SCREENSIZE[1]))
+    RawReadings.append(rawread[1])
+    MovingReadings.append(rawread[0])
     counterlist.append(counter)
-    #Readings.append(50) #Debug
-    #if len(Readings)>SCREENSIZE[0]:
-    #    Readings=Readings[-SCREENSIZE[0]:]
-    #    TimeList=TimeList[-SCREENSIZE[0]:]
-    #    RawReadings=RawReadings[-SCREENSIZE[0]:]
     GraphData+=list(zip([counterlist[-1]],[Readings[-1]]))
     if fpscounter%fpsadjust==0:
         if(mode==1):
             if counter>SCREENSIZE[0]:
-                DrawGraph(GraphData[-SCREENSIZE[0]:],TimeList[-SCREENSIZE[0]:],rawread)
+                DrawGraph(GraphData[-SCREENSIZE[0]:],TimeList[-SCREENSIZE[0]:],rawread,TimeList[0])
             else:
-                DrawGraph(GraphData,TimeList,rawread)
+                DrawGraph(GraphData,TimeList,rawread,TimeList[0])
             PausedData=DoEvents()
         elif (mode==2):
-            if PausedData-SCREENSIZE[0]>0:
-                DrawGraphPaused(GraphData[PausedData-SCREENSIZE[0]:PausedData],TimeList[PausedData-SCREENSIZE[0]:PausedData],rawread)
+            if PausedData-SCREENSIZE[0]>moving:
+                DrawGraphPaused(GraphData[PausedData-SCREENSIZE[0]:PausedData],TimeList[PausedData-SCREENSIZE[0]:PausedData],rawread,TimeList[0],MovingReadings[PausedData-SCREENSIZE[0]-moving:PausedData+moving])
                 Pressed=pygame.key.get_pressed()
                 if(Pressed[K_LEFT]):
-                    PausedData-=int(fpsadjust*SCROLLSPEED)
+                    if not(PausedData<SCREENSIZE[0]+int(fpsadjust*SCROLLSPEED)+1):
+                        PausedData-=int(fpsadjust*SCROLLSPEED)
                 if(Pressed[K_RIGHT]):
-                    PausedData+=int(fpsadjust*SCROLLSPEED)
-                
+                    if not PausedData>counter+SCREENSIZE[0]/2:
+                        PausedData+=int(fpsadjust*SCROLLSPEED)
+                if(Pressed[K_d]):
+                    if (not PausedData>counter-SCREENSIZE[0]/2) and not(pagewait):
+                        PausedData+=SCREENSIZE[0]
+                        pagewait=4
+                if(Pressed[K_a]):
+                    if (not PausedData<SCREENSIZE[0]*2) and not(pagewait):
+                        PausedData-=SCREENSIZE[0]
+                        pagewait=4
+                if(pagewait):
+                    pagewait-=1                        
             else:
-                DrawGraphPaused(GraphData,TimeList,rawread)
+                DrawGraphPaused(GraphData,TimeList,rawread,TimeList[0],MovingReadings[moving-1:])
                 PausedData=counter
             DoEventsPaused()
         
