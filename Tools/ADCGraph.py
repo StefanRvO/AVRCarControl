@@ -6,6 +6,7 @@ from serial import Serial
 import sys
 import pygame
 from pygame.locals import *
+import math
 SCREENSIZE=(1200,700)
 BACKGROUNDCOLOR=(0,0,0) #BLACK
 LINECOLOR=(255,255,255)
@@ -18,6 +19,7 @@ FLAGS=0
 CIRCLECOLOR=(0,0,255)
 LABELCOLOR=(70,180,255)
 SCROLLSPEED=1.5
+connected=1
 def MakeCopy(List):
     newlist=[]
     for i in range(len(List)):
@@ -25,7 +27,17 @@ def MakeCopy(List):
     return newlist
     
 def GetReading(LastReadings):
-
+    global serialport
+    global connected
+    if not connected:
+        try:
+            serialport.close()
+            serialport = Serial(port=portpath, baudrate=9600)
+            connected=1
+        except:
+            connected=0
+            pygame.time.wait(4)
+            return([511,511])
     try:
         reading=[]
         while len(reading)<4:                     
@@ -45,8 +57,9 @@ def GetReading(LastReadings):
         else:
             #Make average over last <moving> readings and return the average
             LastReadings.append(reading[2])
-            return [float(sum(LastReadings))/len(LastReadings),reading[2]]
+            return [int(float(sum(LastReadings))/len(LastReadings)),reading[2]]
     except IOError:
+        connected=0
         pygame.time.wait(4)
         return([511,511])
         
@@ -217,6 +230,7 @@ if "-m" in sys.argv:
 
 portpath=sys.argv[1]
 serialport = Serial(port=portpath, baudrate=9600)
+connected=1
 if "-fscreen" in sys.argv:
     SCREENSIZE=(1366,768)
     FLAGS=pygame.FULLSCREEN
@@ -257,6 +271,7 @@ while True:
     if VERBOSE:
         print(str(rawread[0])+"\t"+str(rawread[1])+"\t"+str(TimeList[-1]-TimeList[0]))
     Readings.append(float(SCREENSIZE[1])-(rawread[0]/1023.)*float(SCREENSIZE[1]))
+    #Readings.append(math.sin(counter/50.)*float(SCREENSIZE[1]/3)+float(SCREENSIZE[1])*(1.5/3))
     RawReadings.append(rawread[1])
     MovingReadings.append(rawread[0])
     counterlist.append(counter)
@@ -273,7 +288,7 @@ while True:
                 DrawGraphPaused(GraphData[PausedData-SCREENSIZE[0]:PausedData],TimeList[PausedData-SCREENSIZE[0]:PausedData],rawread,TimeList[0],MovingReadings[PausedData-SCREENSIZE[0]-moving:PausedData+moving])
                 Pressed=pygame.key.get_pressed()
                 if(Pressed[K_LEFT]):
-                    if not(PausedData<SCREENSIZE[0]+int(fpsadjust*SCROLLSPEED)+1):
+                    if not(PausedData<SCREENSIZE[0]+int(fpsadjust*(SCROLLSPEED+1))):
                         PausedData-=int(fpsadjust*SCROLLSPEED)
                 if(Pressed[K_RIGHT]):
                     if not PausedData>counter+SCREENSIZE[0]/2:
