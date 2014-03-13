@@ -17,36 +17,45 @@ TEXTSIZE=20
 FLAGS=0
 CIRCLECOLOR=(0,0,255)
 LABELCOLOR=(70,180,255)
+SCROLLSPEED=1.5
 def MakeCopy(List):
     newlist=[]
     for i in range(len(List)):
         newlist.append(List[i])
     return newlist
-def GetReading():
-    reading=[]
-    while len(reading)<4:                     
-        while (serialport.inWaiting() > 0) and len(reading)<4:
-            rawin = ord(serialport.read(1))
-            if len(reading)==0 and (not rawin==0xBB):
-                continue
-            if len(reading)==1 and (not rawin==0x14):
-                reading=[]
-                continue
-            else:
-                reading.append(rawin)
-    reading[2]=(reading[2]<<2) | reading[3]>>6        
-    return reading[2]
     
-def DrawGraphPaused(PausedDATA,LastReading):
-    RawReadings=PausedDATA[2]
-    Data=PausedDATA[0]
-    TimeList=PausedDATA[1]
+def GetReading():
+    try:
+        reading=[]
+        while len(reading)<4:                     
+            while (serialport.inWaiting() > 0) and len(reading)<4:
+                rawin = ord(serialport.read(1))
+                if len(reading)==0 and (not rawin==0xBB):
+                    continue
+                if len(reading)==1 and (not rawin==0x14):
+                    reading=[]
+                    continue
+                else:
+                    reading.append(rawin)
+        reading[2]=(reading[2]<<2) | reading[3]>>6        
+        return reading[2]
+    except IOError:
+        pygame.time.wait(4)
+        return(511)
+        
+    
+def DrawGraphPaused(Data,TimeList,LastReading):
+    NData=[[x,x] for x in range(len(Data))]
+    for i in range(len(Data)):
+        NData[i]=[Data[i][0]-Data[0][0],Data[i][1]]
+    Data=NData
     CurrentTime=TimeList[-1]
     Time=TimeList[0]
     Timespan=Time-CurrentTime
     screen.fill(BACKGROUNDCOLOR)
     MouseX=pygame.mouse.get_pos()[0]
-    #print(type(Data[MouseX][1]))
+    if MouseX>len(Data):
+        MouseX=len(Data)-1
     #Draw x-asix
     pygame.draw.line(screen,AXISCOLOR,(0,SCREENSIZE[1]/2),(SCREENSIZE[0],SCREENSIZE[1]/2),2)
     #Draw y-axis
@@ -98,6 +107,10 @@ def DrawGraphPaused(PausedDATA,LastReading):
     return 0    
 
 def DrawGraph(Data,TimeList,LastReading):
+    NData=[x for x in range(len(Data))*2]
+    for i in range(len(Data)):
+        NData[i]=[Data[i][0]-Data[0][0],Data[i][1]]
+    Data=NData
     CurrentTime=TimeList[-1]
     Time=TimeList[0]
     Timespan=Time-CurrentTime
@@ -151,14 +164,9 @@ def DoEvents():
                 sys.exit()
             elif event.key==K_SPACE:
                 mode=2
-                global Readings
-                global TimeList
-                global RawReadings
-                PReadings=[x for x in Readings]
-                PGraphData=list(zip(counter,PReadings))
-                PTimeList=[x for x in TimeList]
-                PRawReadings=[x for x in RawReadings]
-                return [PGraphData,PTimeList,PRawReadings]
+                global counter
+
+                return(counter)
                 
 def DoEventsPaused():
     global mode
@@ -171,6 +179,7 @@ def DoEventsPaused():
             elif event.key==K_SPACE:
                     
                     mode=1
+                    
                     
 
 #Setup Serial    
@@ -195,13 +204,16 @@ fpscounter=1
 fpsadjust=5
 Readings=[float(SCREENSIZE[1])-(GetReading()/1023.)*float(SCREENSIZE[1])]
 RawReadings=[GetReading()]
-counter=range(SCREENSIZE[0])
+counterlist=[0]
+counter=0
 #Setup fonts
 RAWFont=pygame.font.SysFont(FONTUSED,TEXTSIZE)
 TimeList=[pygame.time.get_ticks()]
 mode=1
-PausedDATA=[]
+PausedData=0
+GraphData=[]
 while True:
+    counter+=1
     fpscounter+=1
     rawread=GetReading()
     TimeList.append(pygame.time.get_ticks())
@@ -209,18 +221,32 @@ while True:
         print(str(rawread)+"\t"+str(TimeList[-1]))
     Readings.append(float(SCREENSIZE[1])-(rawread/1023.)*float(SCREENSIZE[1]))
     RawReadings.append(rawread)
+    counterlist.append(counter)
     #Readings.append(50) #Debug
-    if len(Readings)>SCREENSIZE[0]:
-        Readings=Readings[-SCREENSIZE[0]:]
-        TimeList=TimeList[-SCREENSIZE[0]:]
-        RawReadings=RawReadings[-SCREENSIZE[0]:]
-    GraphData=list(zip(counter,Readings))
+    #if len(Readings)>SCREENSIZE[0]:
+    #    Readings=Readings[-SCREENSIZE[0]:]
+    #    TimeList=TimeList[-SCREENSIZE[0]:]
+    #    RawReadings=RawReadings[-SCREENSIZE[0]:]
+    GraphData+=list(zip([counterlist[-1]],[Readings[-1]]))
     if fpscounter%fpsadjust==0:
         if(mode==1):
-            DrawGraph(GraphData,TimeList,rawread)
-            PausedDATA=DoEvents()
+            if counter>SCREENSIZE[0]:
+                DrawGraph(GraphData[-SCREENSIZE[0]:],TimeList[-SCREENSIZE[0]:],rawread)
+            else:
+                DrawGraph(GraphData,TimeList,rawread)
+            PausedData=DoEvents()
         elif (mode==2):
-            DrawGraphPaused(PausedDATA,rawread)
+            if PausedData-SCREENSIZE[0]>0:
+                DrawGraphPaused(GraphData[PausedData-SCREENSIZE[0]:PausedData],TimeList[PausedData-SCREENSIZE[0]:PausedData],rawread)
+                Pressed=pygame.key.get_pressed()
+                if(Pressed[K_LEFT]):
+                    PausedData-=int(fpsadjust*SCROLLSPEED)
+                if(Pressed[K_RIGHT]):
+                    PausedData+=int(fpsadjust*SCROLLSPEED)
+                
+            else:
+                DrawGraphPaused(GraphData,TimeList,rawread)
+                PausedData=counter
             DoEventsPaused()
         
     

@@ -11,7 +11,7 @@
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial.asm"      ;setup serial connection
+.include "SetupSerial16Mhz.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -103,6 +103,9 @@ CALL STOP
 CPI R17,0x12
 BRNE    PC+2
 CALL AUTOMODE
+cpi R17,0x13
+BRNE    PC+2
+CALL    GetACCELLoop
 RET
 ;*********
 ;****************GETMODE
@@ -284,8 +287,11 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
-CALL GETACCEL
 RJMP    Main
 
+
+GetACCELLoop:
+CALL GETACCEL
+rjmp GetACCELLoop
 
 
