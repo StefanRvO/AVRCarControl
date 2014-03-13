@@ -37,14 +37,13 @@ def GetReading():
     reading[2]=(reading[2]<<2) | reading[3]>>6        
     return reading[2]
     
-def DrawGraphPaused(PausedDATA):
+def DrawGraphPaused(PausedDATA,LastReading):
     RawReadings=PausedDATA[2]
     Data=PausedDATA[0]
     TimeList=PausedDATA[1]
     CurrentTime=TimeList[-1]
     Time=TimeList[0]
     Timespan=Time-CurrentTime
-    LastReading=RawReadings[-1]
     screen.fill(BACKGROUNDCOLOR)
     MouseX=pygame.mouse.get_pos()[0]
     #print(type(Data[MouseX][1]))
@@ -221,7 +220,7 @@ while True:
             DrawGraph(GraphData,TimeList,rawread)
             PausedDATA=DoEvents()
         elif (mode==2):
-            DrawGraphPaused(PausedDATA)
+            DrawGraphPaused(PausedDATA,rawread)
             DoEventsPaused()
         
     
