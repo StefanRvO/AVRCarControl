@@ -5,13 +5,14 @@
 .equ TransMSG = 0x301
 .equ END_ = 0xFF
 .include "m32def.inc"
+.equ MotorSensorCount = 0x500 ;Counter for the motor sensor
 
 .org    0x0000
 .include "SetupInterrupts.asm"   ;setup Interrupts
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial16Mhz.asm"      ;setup serial connection
+.include "SetupSerial.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -22,6 +23,7 @@ Reset:
     sts T1_Counter1,R16  ;zero counter stuff
     sts T1_Counter2,R16  ;zero counter stuff
     sts T1_Counter3,R16  ;zero counter stuff
+    sts MotorSensorCount,R16 ;Clear motor counter
     jmp     Main
     
 ;****
@@ -51,6 +53,33 @@ out     SREG,R16
 pop     R16
 reti
 
+;******************
+;***********INT1,MOTOR SENSOR
+;******************
+INT1_ISR:
+push R16
+in R16,SREG
+push R16
+lds R16,MotorSensorCount ;Read in motor counter
+inc R16 ;Increase it
+cpi R16,0x10
+brne INT1_ISR_END
+push R20
+push R21
+ldi R20,0xaa
+ldi R21,0xaa
+ldi R16,0x01
+sts TransNum,R16
+CALL TRANSREPLY
+ldi R16,0x00
+pop R21
+pop R20
+INT1_ISR_END:
+sts MotorSensorCount,R16 ;Return it
+pop R16
+out SREG,R16
+pop R16
+RETI
 ;*******************
 ;******************* RECIVE INTERRUPT
 RX_ISR: ;We always recive 3 bytes, put them in R16:R18
@@ -103,7 +132,7 @@ CALL STOP
 CPI R17,0x12
 BRNE    PC+2
 CALL AUTOMODE
-cpi R17,0x13
+cpi R17,0x13 ;accell loop, continuesly send accelerometer data
 BRNE    PC+2
 CALL    GetACCELLoop
 RET
