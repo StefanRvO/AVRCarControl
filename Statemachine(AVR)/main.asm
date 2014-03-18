@@ -1,11 +1,13 @@
 .equ T1_Counter1 = 0x250
 .equ T1_Counter2 = 0x251
 .equ T1_Counter3 = 0x252
+.equ MotorSensorCount1 = 0x500 ;Counter for the motor sensor
+.equ MotorSensorCount2=0x501
+.equ MotorSensorCount3=0x502
 .equ TransNum =0x300
 .equ TransMSG = 0x301
 .equ END_ = 0xFF
 .include "m32def.inc"
-.equ MotorSensorCount = 0x500 ;Counter for the motor sensor
 
 .org    0x0000
 .include "SetupInterrupts.asm"   ;setup Interrupts
@@ -23,7 +25,9 @@ Reset:
     sts T1_Counter1,R16  ;zero counter stuff
     sts T1_Counter2,R16  ;zero counter stuff
     sts T1_Counter3,R16  ;zero counter stuff
-    sts MotorSensorCount,R16 ;Clear motor counter
+    sts MotorSensorCount1,R16 ;Clear motor counter
+    sts MotorSensorCount2,R16 ;Clear motor counter
+    sts MotorSensorCount3,R16 ;Clear motor counter
     jmp     Main
     
 ;****
@@ -60,22 +64,23 @@ INT1_ISR:
 push R16
 in R16,SREG
 push R16
-lds R16,MotorSensorCount ;Read in motor counter
+push R17
+push R18
+lds R16,MotorSensorCount1 ;Read in motor counter
+lds R17,MotorSensorCount2 ;Read in motor counter
+lds R18,MotorSensorCount3 ;Read in motor counter
 inc R16 ;Increase it
-cpi R16,0x10
-brne INT1_ISR_END
-push R20
-push R21
-ldi R20,0xaa
-ldi R21,0xaa
-ldi R16,0x01
-sts TransNum,R16
-CALL TRANSREPLY
-ldi R16,0x00
-pop R21
-pop R20
+brne INT1_Counter_Done
+inc R17
+brne INT1_Counter_Done
+inc R18
+INT1_Counter_Done:
+sts MotorSensorCount1,R16
+sts MotorSensorCount2,R17
+sts MotorSensorCount3,R18
 INT1_ISR_END:
-sts MotorSensorCount,R16 ;Return it
+pop R18
+pop R17
 pop R16
 out SREG,R16
 pop R16
@@ -154,6 +159,9 @@ CALL    GETTIME
 cpi R17,0x14
 brne PC+2
 call    GETACCEL
+cpi R17,0x15
+brne PC+2
+call GETMOTORCOUNTER
 RET
 ;******************
 GETSPEED:
@@ -248,6 +256,30 @@ GETTIME: ;Send the speed
     pop R20
     ret
 
+GETMOTORCOUNTER: ;Send the motor counter
+    push R20
+    push R21
+    push R22
+    ;fetch motor counter
+    lds  R22,MotorSensorCount1
+    lds  R21,MotorSensorCount2
+    lds  R20,MotorSensorCount3
+    ;Put counter in TransMSG
+    ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
+    ldi ZL,low(TransMSG<<1)
+    ST  Z+,R20
+    ST  Z+,R21
+    ST  Z+,R22
+    ldi  R20,3
+    sts  TransNum,R20
+    ldi  R20,0xBB ;Respond header
+    ldi  R21,0x15
+    call    TRANSREPLY
+    pop R22
+    pop R21
+    pop R20
+    ret
+
 TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x301 and forward the number of bytes in 0x300
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY
@@ -316,11 +348,16 @@ jmp AutoModeLoop
 ;*MAIN
 ;******
 Main:
-RJMP    Main
+MainLoop:
+lds R23,MotorSensorCount2
+out	PORTB,R23
+RJMP    MainLoop
 
 
 GetACCELLoop:
 CALL GETACCEL
 rjmp GetACCELLoop
 
-
+;;Kør motor sensor ind på T0 ben og sæt rise on falling edge. Timer interrupt sættes med OCR0.
+; Dermed Vil vi kunne vælge at få et interrupt pr. x omdrejning. 0<x<(255/3)
+;GOD LØSNING!!!

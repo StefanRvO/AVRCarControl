@@ -10,7 +10,7 @@ SBI     DDRD,7
 ldi     R19,0       ;Turn motor off
 out     OCR2,R19
 ldi     R19,0x61
-out     TCCR2,R19   ;Phase corrected PWM, no prescale
+out     TCCR2,R19   ;Phase corrected PWM, no prescale ;We use timer 2
 ;interrupt on falling edge
 ldi	R16,(1>>ISC11) | (1<<ISC11)
 out	MCUCR,R16
