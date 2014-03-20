@@ -272,6 +272,8 @@ pop R23
 pop R22
 pop R21
 pop R20
+ret
+
 GETSTOP:
 nop ;Does nothing ATM
 ret
@@ -441,8 +443,7 @@ jmp AutoModeLoop
 ;******
 Main:
 MainLoop:
-lds R23,MotorSensorCount3
-out	PORTB,R23
+nop
 RJMP    MainLoop
 
 
