@@ -1,6 +1,15 @@
 .equ T1_Counter1 = 0x250
 .equ T1_Counter2 = 0x251
 .equ T1_Counter3 = 0x252
+.equ PrevTime1=0x253
+.equ PrevTime2=0x254
+.equ PrevTime3=0x255
+.equ PrevTime4=0x256
+.equ PrevTime5=0x257
+.equ TickTime1=0x258
+.equ TickTime2=0x259
+.equ TickTime3=0x260
+.equ TickTime4=0x261
 .equ MotorSensorCount1 = 0x500 ;Counter for the motor sensor
 .equ MotorSensorCount2=0x501
 .equ MotorSensorCount3=0x502
@@ -14,7 +23,7 @@
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial.asm"      ;setup serial connection
+.include "SetupSerial16Mhz.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -60,25 +69,79 @@ reti
 ;******************
 ;***********INT1,MOTOR SENSOR
 ;******************
-INT1_ISR:
+INT0_ISR:
 push R16
 in R16,SREG
 push R16
 push R17
 push R18
+push R19
+push R20
+push R21
+push R22
+push R23
+push R24
+push R25
 lds R16,MotorSensorCount1 ;Read in motor counter
 lds R17,MotorSensorCount2 ;Read in motor counter
 lds R18,MotorSensorCount3 ;Read in motor counter
 inc R16 ;Increase it
-brne INT1_Counter_Done
+brne INT0_Counter_Done
 inc R17
-brne INT1_Counter_Done
+brne INT0_Counter_Done
 inc R18
-INT1_Counter_Done:
+INT0_Counter_Done:
 sts MotorSensorCount1,R16
 sts MotorSensorCount2,R17
 sts MotorSensorCount3,R18
-INT1_ISR_END:
+INT0_ISR_END:
+;Calculate time since last tick and store in Memory
+
+;Read previeus time in
+lds R16,PrevTime1
+lds R17,PrevTime2
+lds R18,PrevTime3
+lds R19,PrevTime4
+lds R20,PrevTime5
+;Read Current time in
+CLC
+in   R21,TCNT1L ;Timer 1 low
+lds  R23,T1_Counter1     ;what if timer overflows while in interrupt?
+lds  R24,T1_Counter2
+lds  R25,T1_Counter3
+in  R22,TIFR
+SBRS    R22,TOV1 ;Increment R23 if we have a overflow
+inc R23
+cpi R23,0x00
+BRNE    END_INC_INT0
+inc R24
+cpi R24,0x00
+BRNE    END_INC_INT0
+inc R25
+END_INC_INT0:
+in   R22,TCNT1H ;Timer 1 high
+sts	PrevTime1,R21
+sts	PrevTime2,R22
+sts	PrevTime3,R23
+sts	PrevTime4,R24
+sts	PrevTime5,R25
+SUB	R21,R16
+SBC	R22,R17
+SBC	R23,R18
+SBC	R24,R19
+SBC	R25,R20
+;Load into memry
+sts TickTime1,R21
+sts TickTime2,R22
+sts TickTime3,R23
+sts TickTime4,R24
+pop R25
+pop R24
+pop R23
+pop R22
+pop R21
+pop R20
+pop R19
 pop R18
 pop R17
 pop R16
@@ -162,6 +225,9 @@ call    GETACCEL
 cpi R17,0x15
 brne PC+2
 call GETMOTORCOUNTER
+cpi R17,0x16
+brne PC+2
+call GETTPR
 RET
 ;******************
 GETSPEED:
@@ -180,6 +246,32 @@ pop R21
 pop R22
 ret
 
+GETTPR: ;Send ticks between last two motor rotations
+push R20
+push R21
+push R22
+push R23
+;Load from RAM
+lds R20,TickTime1
+lds R21,TickTime2
+lds R22,TickTime3
+lds R23,TickTime4
+ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
+ldi ZL,low(TransMSG<<1)
+in  R20,OCR2
+ST  Z+,R20
+ST  Z+,R21
+ST  Z+,R22
+st  Z+,R23
+ldi R20,4
+sts TransNum,R20
+ldi R20,0xbb
+ldi R21,0x17
+Call TRANSREPLY
+pop R23
+pop R22
+pop R21
+pop R20
 GETSTOP:
 nop ;Does nothing ATM
 ret
@@ -349,7 +441,7 @@ jmp AutoModeLoop
 ;******
 Main:
 MainLoop:
-lds R23,MotorSensorCount2
+lds R23,MotorSensorCount3
 out	PORTB,R23
 RJMP    MainLoop
 
@@ -359,5 +451,5 @@ CALL GETACCEL
 rjmp GetACCELLoop
 
 ;;Kør motor sensor ind på T0 ben og sæt rise on falling edge. Timer interrupt sættes med OCR0.
-; Dermed Vil vi kunne vælge at få et interrupt pr. x omdrejning. 0<x<(255/3)
-;GOD LØSNING!!!
+; Dermed Vil vi kunne vælge  at få et interrupt pr. x omdrejning. 0<x<(255/3)
+;GOD LØSNING!!! Måske ikke nødvendig
