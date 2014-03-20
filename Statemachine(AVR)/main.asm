@@ -67,7 +67,7 @@ pop     R16
 reti
 
 ;******************
-;***********INT1,MOTOR SENSOR
+;***********INT0,MOTOR SENSOR
 ;******************
 INT0_ISR:
 push R16
@@ -258,7 +258,6 @@ lds R22,TickTime3
 lds R23,TickTime4
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
-in  R20,OCR2
 ST  Z+,R20
 ST  Z+,R21
 ST  Z+,R22
