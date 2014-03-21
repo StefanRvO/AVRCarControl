@@ -10,6 +10,7 @@
 .equ TickTime2=0x259
 .equ TickTime3=0x260
 .equ TickTime4=0x261
+.equ TickTime5=0x262
 .equ MotorSensorCount1 = 0x500 ;Counter for the motor sensor
 .equ MotorSensorCount2=0x501
 .equ MotorSensorCount3=0x502
@@ -23,7 +24,7 @@
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial16Mhz.asm"      ;setup serial connection
+.include "SetupSerial.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -37,6 +38,15 @@ Reset:
     sts MotorSensorCount1,R16 ;Clear motor counter
     sts MotorSensorCount2,R16 ;Clear motor counter
     sts MotorSensorCount3,R16 ;Clear motor counter
+    sts PrevTime1,R16
+    sts PrevTime2,R16
+    sts PrevTime3,R16
+    sts PrevTime4,R16
+    sts PrevTime5,R16
+    sts TickTime1,R16
+    sts TickTime2,R16
+    sts TickTime3,R16
+    sts TickTime4,R16
     jmp     Main
     
 ;****
@@ -102,39 +112,42 @@ lds R16,PrevTime1
 lds R17,PrevTime2
 lds R18,PrevTime3
 lds R19,PrevTime4
-lds R20,PrevTime5
+lds R25,PrevTime5
 ;Read Current time in
-CLC
-in   R21,TCNT1L ;Timer 1 low
-lds  R23,T1_Counter1     ;what if timer overflows while in interrupt?
-lds  R24,T1_Counter2
-lds  R25,T1_Counter3
-in  R22,TIFR
-SBRS    R22,TOV1 ;Increment R23 if we have a overflow
-inc R23
-cpi R23,0x00
-BRNE    END_INC_INT0
-inc R24
-cpi R24,0x00
-BRNE    END_INC_INT0
-inc R25
-END_INC_INT0:
-in   R22,TCNT1H ;Timer 1 high
-sts	PrevTime1,R21
-sts	PrevTime2,R22
-sts	PrevTime3,R23
-sts	PrevTime4,R24
-sts	PrevTime5,R25
-SUB	R21,R16
-SBC	R22,R17
-SBC	R23,R18
-SBC	R24,R19
-SBC	R25,R20
+    CLC     ;Clear carry flag
+    ;fetch clock
+    in   R20,TCNT1L ;Timer 1 low
+    lds  R22,T1_Counter1     ;what if timer overflows while in interrupt?
+    lds  R23,T1_Counter2
+    lds  R24,T1_Counter3
+    in  R21,TIFR
+    SBRS    R21,TOV1 ;Increment R22 if we have a overflow
+    inc R22
+    cpi R22,0x00
+    BRNE    END_INC_GETTIME_INT0
+    inc R23
+    cpi R23,0x00
+    BRNE    END_INC_GETTIME_INT0
+    inc R24
+    END_INC_GETTIME_INT0:
+    in   R21,TCNT1H ;Timer 1 high 
+    ;fetch done
+sts	PrevTime1,R24
+sts	PrevTime2,R23
+sts	PrevTime3,R22
+sts	PrevTime4,R21
+sts	PrevTime5,R20
+SUB	R24,R16
+SBC	R23,R17
+SBC	R22,R18
+SBC	R21,R19
+SBC	R20,R25
 ;Load into memry
-sts TickTime1,R21
-sts TickTime2,R22
-sts TickTime3,R23
-sts TickTime4,R24
+sts TickTime1,R24
+sts TickTime2,R23
+sts TickTime3,R22
+sts TickTime4,R21
+sts TickTime5,R20
 pop R25
 pop R24
 pop R23
@@ -208,26 +221,33 @@ RET
 ;****************GETMODE
 GET:
 cpi R17,0x10 ;Get speed
-brne    PC+2
+brne    GETSTOPTEST
 CALL GETSPEED
-cpi R17,0x11 ;Get stop
-brne    PC+2
-CALL GETSTOP
-cpi R17,0x12    ;Get automode
-brne    PC+2
-CALL GETAUTOMODE
+GETSTOPTEST:
+;cpi R17,0x11 ;Get stop
+;brne    GETAUTOMODETEST
+;CALL GETSTOP
+GETAUTOMODETEST:
+;cpi R17,0x12    ;Get automode
+;brne    GETTIMETEST
+;CALL GETAUTOMODE
+GETTIMETEST:
 cpi R17,0x13    ;Get timer status
-brne PC+2
+brne GETACCELTEST
 CALL    GETTIME
+GETACCELTEST:
 cpi R17,0x14
-brne PC+2
+brne GETMOTORCOUNTERTEST
 call    GETACCEL
+GETMOTORCOUNTERTEST:
 cpi R17,0x15
-brne PC+2
+brne GETTPRTEST
 call GETMOTORCOUNTER
+GETTPRTEST:
 cpi R17,0x16
-brne PC+2
+brne ENDGET
 call GETTPR
+ENDGET:
 RET
 ;******************
 GETSPEED:
@@ -246,32 +266,35 @@ pop R21
 pop R22
 ret
 
-GETTPR: ;Send ticks between last two motor rotations
+GETTPR: ;Send ticks between last two motor rotations7
+push R16
+push R17
 push R20
 push R21
 push R22
-push R23
-;Load from RAM
-lds R20,TickTime1
-lds R21,TickTime2
-lds R22,TickTime3
-lds R23,TickTime4
+lds R16,TickTime1
+lds R17,TickTime2
+lds R20,TickTime3
+lds R21,TickTime4
+lds R22,TickTime5
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
-ST  Z+,R20
-ST  Z+,R21
-ST  Z+,R22
-st  Z+,R23
-ldi R20,4
-sts TransNum,R20
+ST Z+,R16
+ST Z+,R17
+ST Z+,R20
+ST Z+,R21
+ST Z+,R22
+ldi R16,0x05
+sts TransNum,R16
 ldi R20,0xbb
-ldi R21,0x17
-Call TRANSREPLY
-pop R23
+ldi R21,0x16
+CALL TRANSREPLY
 pop R22
 pop R21
 pop R20
-ret
+pop R17
+pop R16
+RET
 
 GETSTOP:
 nop ;Does nothing ATM
@@ -442,7 +465,8 @@ jmp AutoModeLoop
 ;******
 Main:
 MainLoop:
-nop
+lds R16,MotorSensorCount2
+out PORTB,R16
 RJMP    MainLoop
 
 
