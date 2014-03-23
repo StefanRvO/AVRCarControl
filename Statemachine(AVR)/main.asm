@@ -100,7 +100,7 @@ push R25
     lds  R23,T1_Counter1     ;what if timer overflows while in interrupt?
     lds  R24,T1_Counter2
     lds  R25,T1_Counter3
-    sbrs R25,TOV1
+    sbrs R22,TOV1
     rjmp CLOCK_OFLW_END_INT0
     ldi R16,0x00
     cpse R21,R16
@@ -135,10 +135,13 @@ SBC	R25,R22
 sts TickTime1,R25
 sts TickTime2,R24
 sts TickTime3,R23
-sts TickTime4,R24
-sts TickTime5,R25
+sts TickTime4,R21
+sts TickTime5,R20
 ldi R16,0x11
 out PORTB,R16
+
+
+
 ;counter
 lds R16,MotorSensorCount1 ;Read in motor counter
 lds R17,MotorSensorCount2 ;Read in motor counter
@@ -156,6 +159,7 @@ INT0_ISR_END:
 pop R25
 pop R24
 pop R23
+pop R19
 pop R18
 pop R17
 pop R16
