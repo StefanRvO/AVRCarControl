@@ -80,18 +80,66 @@ reti
 ;***********INT0,MOTOR SENSOR
 ;******************
 INT0_ISR:
-push R16
-in R16,SREG
+push R20
+in R20,SREG
+push R20
+push R21
+push R22
+;Read Current time in
+    ;fetch clock
+    in   R20,TCNT1L ;Timer 1 low
+    in   R21,TCNT1H ;Timer 1 high 
+    in R22,TIFR
 push R16
 push R17
 push R18
 push R19
-push R20
-push R21
-push R22
 push R23
 push R24
 push R25
+    lds  R23,T1_Counter1     ;what if timer overflows while in interrupt?
+    lds  R24,T1_Counter2
+    lds  R25,T1_Counter3
+    sbrs R25,TOV1
+    rjmp CLOCK_OFLW_END_INT0
+    ldi R16,0x00
+    cpse R21,R16
+    rjmp CLOCK_OFLW_END_INT0
+    inc R23
+    cpse R23,R16
+    rjmp CLOCK_OFLW_END_INT0
+    inc R24
+    cpse R24,R16
+    rjmp CLOCK_OFLW_END_INT0
+    inc R25
+    
+CLOCK_OFLW_END_INT0:
+;Read previeus time in
+lds R16,PrevTime1
+lds R17,PrevTime2
+lds R18,PrevTime3
+lds R19,PrevTime4
+lds R22,PrevTime5
+
+sts	PrevTime1,R20
+sts	PrevTime2,R21
+sts	PrevTime3,R23
+sts	PrevTime4,R24
+sts	PrevTime5,R25
+SUB	R20,R16
+SBC	R21,R17
+SBC	R23,R18
+SBC	R24,R19
+SBC	R25,R22
+;Load into memry
+sts TickTime1,R25
+sts TickTime2,R24
+sts TickTime3,R23
+sts TickTime4,R24
+sts TickTime5,R25
+ldi R16,0x11
+out PORTB,R16
+;counter
 lds R16,MotorSensorCount1 ;Read in motor counter
 lds R17,MotorSensorCount2 ;Read in motor counter
 lds R18,MotorSensorCount3 ;Read in motor counter
@@ -105,61 +153,17 @@ sts MotorSensorCount1,R16
 sts MotorSensorCount2,R17
 sts MotorSensorCount3,R18
 INT0_ISR_END:
-;Calculate time since last tick and store in Memory
-
-;Read previeus time in
-lds R16,PrevTime1
-lds R17,PrevTime2
-lds R18,PrevTime3
-lds R19,PrevTime4
-lds R25,PrevTime5
-;Read Current time in
-    CLC     ;Clear carry flag
-    ;fetch clock
-    in   R20,TCNT1L ;Timer 1 low
-    lds  R22,T1_Counter1     ;what if timer overflows while in interrupt?
-    lds  R23,T1_Counter2
-    lds  R24,T1_Counter3
-    in  R21,TIFR
-    SBRS    R21,TOV1 ;Increment R22 if we have a overflow
-    inc R22
-    cpi R22,0x00
-    BRNE    END_INC_GETTIME_INT0
-    inc R23
-    cpi R23,0x00
-    BRNE    END_INC_GETTIME_INT0
-    inc R24
-    END_INC_GETTIME_INT0:
-    in   R21,TCNT1H ;Timer 1 high 
-    ;fetch done
-sts	PrevTime1,R24
-sts	PrevTime2,R23
-sts	PrevTime3,R22
-sts	PrevTime4,R21
-sts	PrevTime5,R20
-SUB	R24,R16
-SBC	R23,R17
-SBC	R22,R18
-SBC	R21,R19
-SBC	R20,R25
-;Load into memry
-sts TickTime1,R24
-sts TickTime2,R23
-sts TickTime3,R22
-sts TickTime4,R21
-sts TickTime5,R20
 pop R25
 pop R24
 pop R23
-pop R22
-pop R21
-pop R20
-pop R19
 pop R18
 pop R17
 pop R16
-out SREG,R16
-pop R16
+pop R22
+pop R21
+pop R20
+out SREG,R20
+pop R20
 RETI
 ;*******************
 ;******************* RECIVE INTERRUPT
@@ -224,13 +228,13 @@ cpi R17,0x10 ;Get speed
 brne    GETSTOPTEST
 CALL GETSPEED
 GETSTOPTEST:
-;cpi R17,0x11 ;Get stop
-;brne    GETAUTOMODETEST
-;CALL GETSTOP
+cpi R17,0x11 ;Get stop
+brne    GETAUTOMODETEST
+CALL GETSTOP
 GETAUTOMODETEST:
-;cpi R17,0x12    ;Get automode
-;brne    GETTIMETEST
-;CALL GETAUTOMODE
+cpi R17,0x12    ;Get automode
+brne    GETTIMETEST
+CALL GETAUTOMODE
 GETTIMETEST:
 cpi R17,0x13    ;Get timer status
 brne GETACCELTEST
@@ -465,8 +469,8 @@ jmp AutoModeLoop
 ;******
 Main:
 MainLoop:
-lds R16,MotorSensorCount2
-out PORTB,R16
+;lds R16,MotorSensorCount2
+;out PORTB,R16
 RJMP    MainLoop
 
 
