@@ -20,7 +20,6 @@ CIRCLECOLOR=(0,0,255)
 LABELCOLOR=(70,180,255)
 SCROLLSPEED=1.5
 connected=1
-SPEED=8000000
 def MakeCopy(List):
     newlist=[]
     for i in range(len(List)):
@@ -38,11 +37,11 @@ def GetReading(LastReadings):
         except:
             connected=0
             pygame.time.wait(4)
-            return([511,511,511])
+            return([511,511])
     try:
         reading=[]
-        while len(reading)<10:                     
-            while (serialport.inWaiting() > 0) and len(reading)<10:
+        while len(reading)<4:                     
+            while (serialport.inWaiting() > 0) and len(reading)<4:
                 rawin = ord(serialport.read(1))
                 if len(reading)==0 and (not rawin==0xBB):
                     continue
@@ -52,17 +51,17 @@ def GetReading(LastReadings):
                 else:
                     reading.append(rawin)
         reading[2]=(reading[2]<<2) | reading[3]>>6
-        reading[3]=(reading[6]<<24) | reading[7]<<16 | reading[8]<<8 | reading[9]
+        
         if len(LastReadings)<moving-1 or moving==1:        
-            return [reading[2],reading[2],reading[3]]
+            return [reading[2],reading[2]]
         else:
             #Make average over last <moving> readings and return the average
             LastReadings.append(reading[2])
-            return [int(float(sum(LastReadings))/len(LastReadings)),reading[2],reading[3]]
+            return [int(float(sum(LastReadings))/len(LastReadings)),reading[2]]
     except IOError:
         connected=0
         pygame.time.wait(4)
-        return([511,511,511])
+        return([511,511])
         
     
 def DrawGraphPaused(Data,TimeList,LastReading,StartTime,RawReadings):
@@ -126,9 +125,6 @@ def DrawGraphPaused(Data,TimeList,LastReading,StartTime,RawReadings):
     #Write out time for the viewed measurement (last time)
     text=RAWFont.render("Current Time ="+str(CurrentTime-StartTime)+" ms",True,(122,122,122))
     screen.blit(text,(5,text.get_height()*2))
-    #Write out motor speed
-    text=RAWFont.render("MOTOR RPM ="+str(float(SPEED)/LastReading[2]),True,(122,122,122))
-    screen.blit(text,(5,text.get_height()*4))
     #View on screen
     pygame.display.flip()
     return 0    
@@ -240,13 +236,11 @@ if "-fscreen" in sys.argv:
     FLAGS=pygame.FULLSCREEN
 MovingReadings=[]
 RawReadings=[]
-#Motorreadings=[]
 #prepare moving average
 for i in range(moving):
     rawread=GetReading([])
     RawReadings.append(rawread[1])
     MovingReadings.append(rawread[0])
-    #Motorreadings.append(rawread[2])
     
 
 #Prepare to draw data
@@ -280,7 +274,6 @@ while True:
     #Readings.append(math.sin(counter/50.)*float(SCREENSIZE[1]/3)+float(SCREENSIZE[1])*(1.5/3))
     RawReadings.append(rawread[1])
     MovingReadings.append(rawread[0])
-    #Motorreadings.append(rawread[2])
     counterlist.append(counter)
     GraphData+=list(zip([counterlist[-1]],[Readings[-1]]))
     if fpscounter%fpsadjust==0:
@@ -316,4 +309,5 @@ while True:
             DoEventsPaused()
         
     
+
 
