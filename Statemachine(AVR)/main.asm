@@ -1,3 +1,4 @@
+.equ T1_RCounter=0x249
 .equ T1_Counter1 = 0x250
 .equ T1_Counter2 = 0x251
 .equ T1_Counter3 = 0x252
@@ -11,12 +12,16 @@
 .equ TickTime3=0x260
 .equ TickTime4=0x261
 .equ TickTime5=0x262
+.equ Counter=0x263
+.equ ADCInterval=24
 .equ MotorSensorCount1 = 0x500 ;Counter for the motor sensor
 .equ MotorSensorCount2=0x501
 .equ MotorSensorCount3=0x502
 .equ TransNum =0x300
 .equ TransMSG = 0x301
 .equ END_ = 0xFF
+.equ ADCAVG=0x400
+.equ ADCAVGSize=10
 .include "m32def.inc"
 
 .org    0x0000
@@ -24,7 +29,7 @@
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial.asm"      ;setup serial connection
+.include "SetupSerial16Mhz.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -35,6 +40,8 @@ Reset:
     sts T1_Counter1,R16  ;zero counter stuff
     sts T1_Counter2,R16  ;zero counter stuff
     sts T1_Counter3,R16  ;zero counter stuff
+    sts T1_RCounter,R16
+    sts Counter,R16
     sts MotorSensorCount1,R16 ;Clear motor counter
     sts MotorSensorCount2,R16 ;Clear motor counter
     sts MotorSensorCount3,R16 ;Clear motor counter
@@ -47,6 +54,9 @@ Reset:
     sts TickTime2,R16
     sts TickTime3,R16
     sts TickTime4,R16
+    ldi R16,0x10
+    sts ADCInterval,R16
+    CALL ADCAVGSETUP
     jmp     Main
     
 ;****
@@ -58,6 +68,7 @@ T1_OVFLW:
 push    R16
 in      R16,SREG
 push    R16
+push	R17
 lds     R16,T1_Counter1
 inc     R16
 sts     T1_Counter1,R16
@@ -65,13 +76,21 @@ BRNE    T1_OVFLW_END
 lds     R16,T1_Counter2
 inc     R16
 sts     T1_Counter2,R16
-;out     PORTB,R16 ;Debugger
 BRNE    T1_OVFLW_END
 lds     R16,T1_Counter3
 inc     R16
 sts     T1_Counter3,R16 
 T1_OVFLW_END:
+lds	R17,T1_RCounter
+inc	R17
+cpi	R17,ADCInterval
+brne	T1_OVFLW_END2
+CALL	CALCADC
+ldi	R17,0x00
+T1_OVFLW_END2:
+sts	T1_RCounter,R17
 pop     R16
+pop 	R17
 out     SREG,R16
 pop     R16
 reti
@@ -80,68 +99,10 @@ reti
 ;***********INT0,MOTOR SENSOR
 ;******************
 INT0_ISR:
-push R20
-in R20,SREG
-push R20
-push R21
-push R22
-;Read Current time in
-    ;fetch clock
-    in   R20,TCNT1L ;Timer 1 low
-    in   R21,TCNT1H ;Timer 1 high 
-    in R22,TIFR
 push R16
+in R16,SREG
 push R17
 push R18
-push R19
-push R23
-push R24
-push R25
-    lds  R23,T1_Counter1     ;what if timer overflows while in interrupt?
-    lds  R24,T1_Counter2
-    lds  R25,T1_Counter3
-    sbrs R22,TOV1
-    rjmp CLOCK_OFLW_END_INT0
-    ldi R16,0x00
-    cpse R21,R16
-    rjmp CLOCK_OFLW_END_INT0
-    inc R23
-    cpse R23,R16
-    rjmp CLOCK_OFLW_END_INT0
-    inc R24
-    cpse R24,R16
-    rjmp CLOCK_OFLW_END_INT0
-    inc R25
-    
-CLOCK_OFLW_END_INT0:
-;Read previeus time in
-lds R16,PrevTime1
-lds R17,PrevTime2
-lds R18,PrevTime3
-lds R19,PrevTime4
-lds R22,PrevTime5
-
-sts	PrevTime1,R20
-sts	PrevTime2,R21
-sts	PrevTime3,R23
-sts	PrevTime4,R24
-sts	PrevTime5,R25
-SUB	R20,R16
-SBC	R21,R17
-SBC	R23,R18
-SBC	R24,R19
-SBC	R25,R22
-;Load into memry
-sts TickTime1,R25
-sts TickTime2,R24
-sts TickTime3,R23
-sts TickTime4,R21
-sts TickTime5,R20
-ldi R16,0x11
-out PORTB,R16
-
-
-
 ;counter
 lds R16,MotorSensorCount1 ;Read in motor counter
 lds R17,MotorSensorCount2 ;Read in motor counter
@@ -156,20 +117,26 @@ sts MotorSensorCount1,R16
 sts MotorSensorCount2,R17
 sts MotorSensorCount3,R18
 INT0_ISR_END:
-pop R25
-pop R24
-pop R23
-pop R19
 pop R18
 pop R17
 pop R16
-pop R22
-pop R21
-pop R20
-out SREG,R20
-pop R20
+out SREG,R16
+pop R16
 RETI
+
 ;*******************
+;****INT1, Line sensor
+INT1_ISR:
+CALL 	GETMOTORCOUNTER
+ldi 	R16,0x00
+sts MotorSensorCount1,R16
+sts MotorSensorCount2,R16
+sts MotorSensorCount3,R16
+reti 	
+
+
+
+
 ;******************* RECIVE INTERRUPT
 RX_ISR: ;We always recive 3 bytes, put them in R16:R18
 push    R16 ;Push  to stack
@@ -194,7 +161,6 @@ pop     R16
 out      SREG,R16
 pop     R16
 RETI
-
 
 ;****************************CHANGE STATE
 STATESET:
@@ -223,7 +189,7 @@ BRNE    PC+2
 CALL AUTOMODE
 cpi R17,0x13 ;accell loop, continuesly send accelerometer data
 BRNE    PC+2
-CALL    GetACCELLoop
+CALL    GetDATALoop
 RET
 ;*********
 ;****************GETMODE
@@ -279,25 +245,25 @@ push R16
 push R17
 push R20
 push R21
-push R22
+;push R22
 lds R16,TickTime1
 lds R17,TickTime2
 lds R20,TickTime3
 lds R21,TickTime4
-lds R22,TickTime5
+;lds R22,TickTime5
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
 ST Z+,R16
 ST Z+,R17
 ST Z+,R20
 ST Z+,R21
-ST Z+,R22
-ldi R16,0x05
+;ST Z+,R22
+ldi R16,0x04
 sts TransNum,R16
 ldi R20,0xbb
 ldi R21,0x16
 CALL TRANSREPLY
-pop R22
+;pop R22
 pop R21
 pop R20
 pop R17
@@ -430,8 +396,39 @@ TRANSREPLYEXIT:
 pop R23
 pop R22
 RET
-;***************
 
+CALCADC:	;Read in from ADC, Calc the avg of last ADCAVGSIZE measurements
+push R20
+lds R20,Counter
+inc R20
+out PORTB,R20
+sts Counter,R20
+pop R20
+ret
+
+ADCAVGSETUP:
+push R16
+push R17
+ldi	ZH,high(ADCAVG+1<<1)	; make high byte of Z point at address of ADCAVG+1
+ldi ZL,low(ADCAVG+1<<1)
+ldi R16,ADCAVGSIZE
+
+ADCSETUPLOOP:
+cpi	R16,0x00
+breq ADCSETUPEND
+SBI ADCSRA,ADSC ;start conversion
+WAITADCSETUP:
+SBIS ADCSRA,ADIF ;is adc done?
+rjmp    WAITADCSETUP
+in R17,ADCH
+st Z+,R17
+rjmp ADCSETUPLOOP
+ADCSETUPEND:
+;Enable auto-trigger mode.
+pop R17
+pop R16
+ret
+;***************
 SETSPEED:
 ;GET OUT OF INTERRUPT MODE, clear the stack 
 		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
@@ -473,14 +470,14 @@ jmp AutoModeLoop
 ;******
 Main:
 MainLoop:
-;lds R16,MotorSensorCount2
-;out PORTB,R16
 RJMP    MainLoop
 
 
-GetACCELLoop:
+GetDATALoop:
+sei
 CALL GETACCEL
-rjmp GetACCELLoop
+CALL GETTPR
+rjmp GetDATALoop
 
 ;;Kør motor sensor ind på T0 ben og sæt rise on falling edge. Timer interrupt sættes med OCR0.
 ; Dermed Vil vi kunne vælge  at få et interrupt pr. x omdrejning. 0<x<(255/3)
