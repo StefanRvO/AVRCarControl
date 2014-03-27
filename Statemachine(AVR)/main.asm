@@ -15,7 +15,10 @@ Reset:
     sei
     jmp     Main
 .include "ISR's.asm"
-
+.include "ADCSetup.asm"
+.include "Get_Routines.asm"
+.include "SET_Routines.asm"
+.include "Transmit.asm"
 
 
 

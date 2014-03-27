@@ -36,9 +36,38 @@ sts MotorSensorCount1,R16
 sts MotorSensorCount2,R16
 sts MotorSensorCount3,R16
 reti 	
+;***************************
 
-
-
+T1_OVFLW:
+push R16
+in R16,SREG
+push R16
+push	R17
+lds R16,T1_Counter1
+inc R16
+sts T1_Counter1,R16
+BRNE T1_OVFLW_END
+lds R16,T1_Counter2
+inc R16
+sts T1_Counter2,R16
+BRNE T1_OVFLW_END
+lds R16,T1_Counter3
+inc R16
+sts T1_Counter3,R16
+T1_OVFLW_END:
+lds	R17,T1_RCounter
+inc	R17
+cpi	R17,ADCInterval
+brne	T1_OVFLW_END2
+CALL	CALCADC
+ldi	R17,0x00
+T1_OVFLW_END2:
+sts	T1_RCounter,R17
+pop R16
+pop R17
+out SREG,R16
+pop R16
+reti
 
 ;******************* RECIVE INTERRUPT
 RX_ISR: ;We always recive 3 bytes, put them in R16:R18
