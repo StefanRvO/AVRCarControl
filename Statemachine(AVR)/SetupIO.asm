@@ -11,12 +11,12 @@ ldi     R19,0       ;Turn motor off
 out     OCR2,R19
 ldi     R19,0x61
 out     TCCR2,R19   ;Phase corrected PWM, no prescale ;We use timer 2
-;interrupt on falling edge, INT0 and INT1
-ldi	R16,(1<<ISC11)  | (1<<ISC01) 
+;interrupt on falling edge
+ldi	R16,(1<<ISC01) | (1<<ISC00) | (1<<ISC11) | (1<<ISC10) 
 out	MCUCR,R16
-;Enable PD2 & PD3 pullup
-SBI	PORTD,3
+;Enable PD2 pullup
 SBI	PORTD,2
-;Enable external interrupt 1 (PD3) and 0 (PD2)
-ldi	R16,(1<<INT1) | (1<<INT0)
+SBI	PORTD,3
+;Enable external interrupt 1 (PD2)
+ldi	R16,(1<<INT0) | (1<<INT1)
 out	GICR,R16
