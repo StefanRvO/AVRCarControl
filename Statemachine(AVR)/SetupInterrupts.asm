@@ -2,6 +2,8 @@
 jmp     Reset
 .org 0x0002 ;INT0, Motor sensor
 jmp	INT0_ISR
+.org 0x0004
+jmp INT1_ISR
 .org 0x0012 ;timer1 overflow
 jmp T1_OVFLW
 .org 0x001A

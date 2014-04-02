@@ -1,15 +1,6 @@
 .equ T1_Counter1 = 0x250
 .equ T1_Counter2 = 0x251
 .equ T1_Counter3 = 0x252
-.equ PrevTime1=0x253
-.equ PrevTime2=0x254
-.equ PrevTime3=0x255
-.equ PrevTime4=0x256
-.equ PrevTime5=0x257
-.equ TickTime1=0x258
-.equ TickTime2=0x259
-.equ TickTime3=0x260
-.equ TickTime4=0x261
 .equ MotorSensorCount1 = 0x500 ;Counter for the motor sensor
 .equ MotorSensorCount2=0x501
 .equ MotorSensorCount3=0x502
@@ -27,6 +18,7 @@ Reset:
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
+;.include "ADCAverageStart.asm"
 
     sei                         ;enable interrupts
     ldi R16,0x00
@@ -95,7 +87,8 @@ pop R16
 RETI
 
 INT1_ISR:
-CALL 	GETMOTORCOUNTER
+;CALL 	GETMOTORCOUNTER ;Print Out Motor counter
+CALL	GETTIME
 ldi 	R16,0x00
 sts MotorSensorCount1,R16
 sts MotorSensorCount2,R16
@@ -170,18 +163,15 @@ CALL GETSTOP
 cpi R17,0x12    ;Get automode
 brne    PC+2
 CALL GETAUTOMODE
-cpi R17,0x13    ;Get timer status
-brne PC+2
-CALL    GETTIME
 cpi R17,0x14
 brne PC+2
 call    GETACCEL
 cpi R17,0x15
 brne PC+2
 call GETMOTORCOUNTER
-cpi R17,0x16
+cpi R17,0x16    ;Get timer status
 brne PC+2
-call GETTPR
+CALL    GETTIME
 RET
 ;******************
 GETSPEED:
@@ -200,32 +190,7 @@ pop R21
 pop R22
 ret
 
-GETTPR: ;Send ticks between last two motor rotations
-push R20
-push R21
-push R22
-push R23
-;Load from RAM
-lds R20,TickTime1
-lds R21,TickTime2
-lds R22,TickTime3
-lds R23,TickTime4
-ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
-ldi ZL,low(TransMSG<<1)
-in  R20,OCR2
-ST  Z+,R20
-ST  Z+,R21
-ST  Z+,R22
-st  Z+,R23
-ldi R20,4
-sts TransNum,R20
-ldi R20,0xbb
-ldi R21,0x17
-Call TRANSREPLY
-pop R23
-pop R22
-pop R21
-pop R20
+
 GETSTOP:
 nop ;Does nothing ATM
 ret
@@ -259,29 +224,37 @@ RET
 
 
 GETTIME: ;Send the speed
+    push R19
     push R20
     push R21
     push R22
     push R23
     push R24
-    CLC     ;Clear carry flag
     ;fetch clock
-    in   R20,TCNT1L ;Timer 1 low
     lds  R22,T1_Counter1     ;what if timer overflows while in interrupt?
     lds  R23,T1_Counter2
     lds  R24,T1_Counter3
-    in  R21,TIFR
-    SBRS    R21,TOV1 ;Increment R22 if we have a overflow
+    in  R20,TCNT1L
+    in  R21,TCNT1H
+    in  R19,TIFR
+    SBRS    R19	,TOV1 ;Increment  if we have a overflow
+    rjmp END_INC_GETTIME
+    cpi R21,0xff
+    brne INCREASE_GETTIME ;routine is partly ripped of from arduino's micros() code
+    cpi R20,0xfe
+    brsh INCREASE_GETTIME
+    rjmp END_INC_GETTIME
+    INCREASE_GETTIME:
+    CLC
     inc R22
-    cpi R22,0x00
-    BRNE    END_INC_GETTIME
+    brne END_INC_GETTIME
     inc R23
-    cpi R23,0x00
-    BRNE    END_INC_GETTIME
+    brne END_INC_GETTIME
     inc R24
-    END_INC_GETTIME: 
-    in   R21,TCNT1H ;Timer 1 high 
+    END_INC_GETTIME:  
     ;fetch done
+
+
     ;Put Time in TransMSG
     ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
     ldi ZL,low(TransMSG<<1)
@@ -293,13 +266,14 @@ GETTIME: ;Send the speed
     ldi  R20,5
     sts  TransNum,R20
     ldi  R20,0xBB ;Respond header
-    ldi  R21,0x13
-    call    TRANSREPLY
+    ldi  R21,0x16
+    CALL    TRANSREPLY
     pop R24
     pop R23
     pop R22
     pop R21
     pop R20
+    pop R19
     ret
 
 GETMOTORCOUNTER: ;Send the motor counter
@@ -336,21 +310,17 @@ RJMP    TRANSREPLY1
 out     UDR,R21
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
-push R22
-push R23
-lds R23,TransNum
-inc R23 ;Need to inc to get correct count
+lds R20,TransNum
+inc R20 ;Need to inc to get correct count
 TRANSREPLYloop:
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLYloop
-dec    R23
+dec    R20
 BREQ   TRANSREPLYEXIT
-ld     R22,Z+
-out     UDR,R22
+ld     R21,Z+
+out     UDR,R21
 rjmp    TRANSREPLYloop
 TRANSREPLYEXIT:
-pop R23
-pop R22
 RET
 ;***************
 
@@ -395,8 +365,6 @@ jmp AutoModeLoop
 ;******
 Main:
 MainLoop:
-lds R23,MotorSensorCount3
-out	PORTB,R23
 RJMP    MainLoop
 
 
