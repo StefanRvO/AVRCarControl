@@ -7,6 +7,9 @@
 .equ TransNum =0x300
 .equ TransMSG = 0x301
 .equ END_ = 0xFF
+.equ    Readings=0x600 ; Here we put in our ADC readings
+.equ    CurReading=0x599
+.equ    BUFFERSIZE=16
 .include "m32Adef.inc"
 
 .org    0x0000
@@ -18,7 +21,7 @@ Reset:
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
-;.include "ADCAverageStart.asm"
+.include "ADCAverageStart.asm"
 
     sei                         ;enable interrupts
     ldi R16,0x00
@@ -54,6 +57,7 @@ inc     R16
 sts     T1_Counter3,R16
 
 T1_OVFLW_END:
+CALL ADCSAMPLE
 pop     R16
 out     SREG,R16
 pop     R16
@@ -122,6 +126,88 @@ out      SREG,R16
 pop     R16
 RETI
 
+ADCSAMPLE: ;Get an ADC Sample and Put it into a ring buffer
+    push    R19
+    push    R18
+    push    R17
+    push    ZL
+    push    ZH
+
+    ;Read In ADC
+    in      R19,ADCH
+    ;out    PORTB,R19 ;Debug
+
+    ;ANDI   R19,0b00001111
+    ;out    PORTB,R19 ;Debug
+    ldi	    ZH,high(Readings)	; make high byte of Z point at the Readings list
+    ldi     ZL,low(Readings)
+
+    ldi     R18,0x00
+    lds     R17,CurReading
+    sub     R18,R17
+
+    Loop:
+        cpi     R18,0x00
+        breq    STOPINC
+        inc     R18
+        ADIW    ZL,1
+        rjmp    Loop
+
+    STOPINC:
+    st      Z,R19
+    inc     R17
+    cpi     R17,BUFFERSIZE
+    brne    ENDT1
+    ldi     R17,0x00
+    ENDT1:
+    sts     CurReading,R17
+    pop     ZH
+    pop     ZL
+    pop     R17
+    pop     R18
+    pop     R19
+    ret
+
+
+MakeAverage: ;//Read in from the Readings circle buffer, calculate the average. Put in R20
+
+    push    R18
+    push    R19
+    push    R23
+    push    R21
+    push    ZH
+    push    ZL
+    ldi     R20,0x00 ;Here we hold the sum
+    ldi     R21,0x00
+    
+    ldi	    ZH,high(Readings)	; make high byte of Z point at the Readings list
+    ldi     ZL,low(Readings)
+    ldi     R18,0x00
+    ldi     R19,0x00
+    AverageLoop:
+    inc     R18
+    LD	    R23,Z+
+    add     R20,R23
+    adc     R21,R19
+    cpi     R18,BUFFERSIZE
+    brne    AverageLoop
+                    ;//Divide the sum //This doesn't adjust according to BUFFERSIZE. do it yourself!
+    LSR     R21
+    ROR     R20
+    LSR     R21
+    ROR     R20
+    LSR     R21
+    ROR     R20
+    LSR     R21
+    ROR     R20 //We have divided by 16
+    pop     ZL
+    pop     ZH
+    pop     R21
+    pop     R23
+    pop     R19
+    pop     R18
+ret
+
 
 ;****************************CHANGE STATE
 STATESET:
@@ -178,8 +264,8 @@ RET
 GETSPEED:
 push R20
 push R21
-ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
-ldi ZL,low(TransMSG<<1)
+ldi	ZH,high(TransMSG)	; make high byte of Z point at address of msg
+ldi ZL,low(TransMSG)
 in  R20,OCR2
 ST  Z+,R20
 ldi R20,1
@@ -200,18 +286,12 @@ GETAUTOMODE:
 nop ;Does nothing ATM
 ret
 
-GETACCEL: ;Read adc at PA0
-SBI ADCSRA,ADSC ;start conversion
+GETACCEL:
 push R20
 push R21
-ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
-ldi ZL,low(TransMSG<<1)
-in R20,ADCL
-in R21,ADCH
-;out PORTB,R21 ;Put value (first 8 bit) on port b (for debugging..?)
-ST  Z+,R21 
-ST  Z+,R20         ;         ; Put in RAM for transfer
-ldi R20,2        ;
+CALL MakeAverage 
+sts TransMSG,R20
+ldi R20,1        ;
 sts  TransNum,R20          ;
 ldi R20,0xBB ;Response headers
 ldi R21,0x14
@@ -254,8 +334,8 @@ GETTIME: ;Send the speed
 
 
     ;Put Time in TransMSG
-    ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
-    ldi ZL,low(TransMSG<<1)
+    ldi	ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi ZL,low(TransMSG)
     ST  Z+,R24
     ST  Z+,R23
     ST  Z+,R22
@@ -283,8 +363,8 @@ GETMOTORCOUNTER: ;Send the motor counter
     lds  R21,MotorSensorCount2
     lds  R20,MotorSensorCount3
     ;Put counter in TransMSG
-    ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
-    ldi ZL,low(TransMSG<<1)
+    ldi	ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi ZL,low(TransMSG)
     ST  Z+,R20
     ST  Z+,R21
     ST  Z+,R22
@@ -306,8 +386,8 @@ TRANSREPLY1:
 SBIS    UCSRA,UDRE
 RJMP    TRANSREPLY1
 out     UDR,R21
-ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
-ldi ZL,low(TransMSG<<1)
+ldi	ZH,high(TransMSG)	; make high byte of Z point at address of msg
+ldi ZL,low(TransMSG)
 lds R20,TransNum
 inc R20 ;Need to inc to get correct count
 TRANSREPLYloop:
@@ -368,8 +448,15 @@ RJMP    MainLoop
 
 
 GetACCELLoop:
+;GET OUT OF INTERRUPT MODE, clear the stack 
+		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
+		out		SPH, R16                ;ANOTHER
+		ldi		R16, LOW(RAMEND)        ;SOLUTION
+		out		SPL, R16                ;IS NEEDED!!
+	    sei		
+GetACCELLoopLoop:
 CALL GETACCEL
-rjmp GetACCELLoop
+rjmp GetACCELLoopLoop
 
 ;;Kør motor sensor ind på T0 ben og sæt rise on falling edge. Timer interrupt sættes med OCR0.
 ; Dermed Vil vi kunne vælge  at få et interrupt pr. x omdrejning. 0<x<(255/3)
