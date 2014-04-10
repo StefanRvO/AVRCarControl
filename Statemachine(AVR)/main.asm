@@ -10,6 +10,7 @@
 .equ    Readings=0x600 ; Here we put in our ADC readings
 .equ    CurReading=0x599
 .equ    BUFFERSIZE=16
+.equ    ACCELADJUST=0
 .include "m32Adef.inc"
 
 .org    0x0000
@@ -135,6 +136,8 @@ ADCSAMPLE: ;Get an ADC Sample and Put it into a ring buffer
 
     ;Read In ADC
     in      R19,ADCH
+    ldi     R18,ACCELADJUST ;//Adjust for 0g error on accel
+    ADD     R18,R19
     ;out    PORTB,R19 ;Debug
 
     ;ANDI   R19,0b00001111
@@ -434,11 +437,30 @@ AUTOMODE:
 		out		SPL, R16                ;IS NEEDED!!
 	    sei		
 ;*********
-ldi R18,0x00
+
+
+ldi R18,0x70
 AutoModeLoop:
-dec R18   ;Do some artimitic, this is just a placeholder
+;dec R18   ;Do some artimitic, this is just a placeholder
 out OCR2,R18
+CALL MakeAverage
+cpi R20,127+20
+BRSH    LEFTSWING
+cpi R20,127-19
+BRLO    RIGHTSWING
+ldi R20,0x22
+OUT PORTB,R20
 jmp AutoModeLoop
+LEFTSWING:
+ldi R20,0x01
+OUT PORTB,R20
+jmp AutoModeLoop
+
+RIGHTSWING:
+ldi R20,0x00
+OUT PORTB,R20
+jmp AutoModeLoop
+
 ;******
 ;*MAIN
 ;******
