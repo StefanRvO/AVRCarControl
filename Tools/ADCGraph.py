@@ -27,6 +27,7 @@ def MakeCopy(List):
     return newlist
     
 def GetReading(LastReadings):
+#    time.sleep(0.01)
     global serialport
     global connected
     if not connected:
@@ -309,5 +310,6 @@ while True:
             DoEventsPaused()
         
     
+
 
 

@@ -7,14 +7,14 @@
 .equ TransNum =0x300
 .equ TransMSG = 0x301
 .equ END_ = 0xFF
-.include "m32def.inc"
+.include "m32Adef.inc"
 
 .org    0x0000
 .include "SetupInterrupts.asm"   ;setup Interrupts
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial16Mhz.asm"      ;setup serial connection
+.include "SetupSerial.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -51,7 +51,8 @@ sts     T1_Counter2,R16
 BRNE    T1_OVFLW_END
 lds     R16,T1_Counter3
 inc     R16
-sts     T1_Counter3,R16 
+sts     T1_Counter3,R16
+
 T1_OVFLW_END:
 pop     R16
 out     SREG,R16
@@ -205,9 +206,6 @@ push R20
 push R21
 ldi	ZH,high(TransMSG<<1)	; make high byte of Z point at address of msg
 ldi ZL,low(TransMSG<<1)
-WAITADC:
-SBIS ADCSRA,ADIF ;is adc done?
-rjmp    WAITADC
 in R20,ADCL
 in R21,ADCH
 ;out PORTB,R21 ;Put value (first 8 bit) on port b (for debugging..?)
@@ -346,7 +344,8 @@ STOP:
 ;*********
 ldi R18,0x00
 out OCR2,R18
-jmp Main
+jmp GetACCELLoop
+
 AUTOMODE:
 ;GET OUT OF INTERRUPT MODE, clear the stack 
 		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
