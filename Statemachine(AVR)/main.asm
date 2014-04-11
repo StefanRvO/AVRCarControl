@@ -1,16 +1,21 @@
-.equ T1_Counter1 = 0x250
-.equ T1_Counter2 = 0x251
-.equ T1_Counter3 = 0x252
-.equ MotorSensorCount1 = 0x500 ;Counter for the motor sensor
-.equ MotorSensorCount2=0x501
-.equ MotorSensorCount3=0x502
-.equ TransNum =0x300
-.equ TransMSG = 0x301
-.equ END_ = 0xFF
-.equ    Readings=0x600 ; Here we put in our ADC readings
-.equ    CurReading=0x599
-.equ    BUFFERSIZE=16
-.equ    ACCELADJUST=0
+.equ T1_Counter1 = 0x060
+.equ T1_Counter2 = 0x061
+.equ T1_Counter3 = 0x062
+.equ MotorSensorCount1 = 0x063 ;Counter for the motor sensor
+.equ MotorSensorCount2=0x064
+.equ MotorSensorCount3=0x065
+.equ TransNum =0x066
+.equ TransMSG = 0x067 ;//Alocate 10 bytes
+.equ END_ = 0x0FF
+.equ    CurReading=0x071
+.equ    ReadingsCur1=0x072 ;//high pointer adress
+.equ    ReadingsCur2=0x073 ;//Low pointer adress
+.equ    Readings=0x074 ; Here we put in our ADC readings //Alocate 64 bytes
+.equ    CarLane =0x0b4
+.equ    TURNMAG=8
+
+.equ    BUFFERSIZE=32
+.equ    ACCELADJUST=2
 .include "m32Adef.inc"
 
 .org    0x0000
@@ -18,7 +23,7 @@
 .org    0x0060
 Reset:
 .include "SetupStack.asm"       ;setup the stack
-.include "SetupSerial.asm"      ;setup serial connection
+.include "SetupSerial16Mhz.asm"      ;setup serial connection
 .include "SetupIO.asm"
 .include "SetupTime.asm"
 .include "SetupADC.asm"
@@ -33,6 +38,10 @@ Reset:
     sts MotorSensorCount1,R16 ;Clear motor counter
     sts MotorSensorCount2,R16 ;Clear motor counter
     sts MotorSensorCount3,R16 ;Clear motor counter
+    ldi R16,HIGH(Readings)
+    sts ReadingsCur1,R16
+    ldi R16,LOW(Readings)
+    sts ReadingsCur2,R16
     jmp     Main
     
 ;****
@@ -137,7 +146,7 @@ ADCSAMPLE: ;Get an ADC Sample and Put it into a ring buffer
     ;Read In ADC
     in      R19,ADCH
     ldi     R18,ACCELADJUST ;//Adjust for 0g error on accel
-    ADD     R18,R19
+    ADD     R19,R18
     ;out    PORTB,R19 ;Debug
 
     ;ANDI   R19,0b00001111
@@ -203,6 +212,8 @@ MakeAverage: ;//Read in from the Readings circle buffer, calculate the average. 
     ROR     R20
     LSR     R21
     ROR     R20 //We have divided by 16
+    LSR     R21
+    ROR     R20
     pop     ZL
     pop     ZH
     pop     R21
@@ -444,22 +455,124 @@ AutoModeLoop:
 ;dec R18   ;Do some artimitic, this is just a placeholder
 out OCR2,R18
 CALL MakeAverage
-cpi R20,127+20
-BRSH    LEFTSWING
-cpi R20,127-19
-BRLO    RIGHTSWING
-ldi R20,0x22
-OUT PORTB,R20
-jmp AutoModeLoop
-LEFTSWING:
-ldi R20,0x01
-OUT PORTB,R20
+cpi R20,127+TURNMAG
+BRLO    PC+4
+CALL LEFTSWING
+rjmp AutoModeEnd
+cpi R20,127-TURNMAG+1
+BRSH    PC+4
+CALL RIGHTSWING
+rjmp AutoModeEnd
+CALL STRAIGHT
+
+AutoModeEnd:
 jmp AutoModeLoop
 
+
+LEFTSWING:
+push R20
+push R21
+push R22
+push ZL
+push ZH
+ldi R20,0xbf
+out OCR2,R20
+ldi R20,0x0F
+sts TransMsg,R20
+ldi R20,1
+sts TransNum,R20
+ldi R20,0xbb
+ldi R21,0x12
+CALL TRANSREPLY
+
+lds R20,MotorSensorCount1
+lds R21,MotorSensorCount2
+lds R22,MotorSensorCount3
+lds ZH,ReadingsCur1
+lds ZL,ReadingsCur2
+
+ST Z+,R20
+ST Z+,R21
+ST Z+,R22
+ldi R20,0x0f
+ST Z+,R20
+LEFTSWINGWAIT:
+CALL MakeAverage
+cpi R20,127+(TURNMAG/2)
+BRLO PC+2
+rjmp LEFTSWINGWAIT
+lds R20,MotorSensorCount1
+lds R21,MotorSensorCount2
+lds R22,MotorSensorCount3
+ST Z+,R20
+ST Z+,R21
+ST Z+,R22
+ldi R20,0x0f
+ST Z+,R20
+sts ReadingsCur1,ZH
+sts ReadingsCur2,ZL
+
+
+pop ZH
+pop ZL
+pop R22
+pop R21
+pop R20
+ret
+
 RIGHTSWING:
-ldi R20,0x00
-OUT PORTB,R20
-jmp AutoModeLoop
+push R20
+push R21
+push R22
+push ZL
+push ZH
+ldi R20,0xbf
+out OCR2,R20
+ldi R20,0x0F
+sts TransMsg,R20
+ldi R20,1
+sts TransNum,R20
+ldi R20,0xbb
+ldi R21,0x12
+CALL TRANSREPLY
+
+lds R20,MotorSensorCount1
+lds R21,MotorSensorCount2
+lds R22,MotorSensorCount3
+lds ZH,ReadingsCur1
+lds ZL,ReadingsCur2
+
+ST Z+,R20
+ST Z+,R21
+ST Z+,R22
+ldi R20,0xf0
+ST Z+,R20
+RIGHTSWINGWAIT:
+CALL MakeAverage
+cpi R20,127-(TURNMAG/2)+1
+BRSH PC+2
+rjmp RIGHTSWINGWAIT
+lds R20,MotorSensorCount1
+lds R21,MotorSensorCount2
+lds R22,MotorSensorCount3
+ST Z+,R20
+ST Z+,R21
+ST Z+,R22
+ldi R20,0xf0
+ST Z+,R20
+sts ReadingsCur1,ZH
+sts ReadingsCur2,ZL
+
+
+pop ZH
+pop ZL
+pop R22
+pop R21
+pop R20
+ret
+
+STRAIGHT:
+ret
 
 ;******
 ;*MAIN
