@@ -6,12 +6,13 @@
 .equ        MotorSensorCount3=0x065
 .equ        TransNum =0x066
 .equ        TransMSG = 0x067 ;//Alocate 10 bytes
-.equ        END_ = 0x0FF
-.equ        CurReading=0x071
-.equ        ReadingsCur1=0x072 ;//high pointer adress
-.equ        ReadingsCur2=0x073 ;//Low pointer adress
-.equ        Readings=0x074 ; Here we put in our ADC readings //Alocate 64 bytes
-.equ        CarLane =0x0b4
+.equ        END_ = 0xFF
+.equ        AutoModeState=0x071 ;//States: 0x00=Mapping. First lap, 0x01==Calculate, 0x02=Drive
+.equ        CurReading=0x072
+.equ        ReadingsCur1=0x073 ;//high pointer adress
+.equ        ReadingsCur2=0x074 ;//Low pointer adress
+.equ        Readings=0x075 ; Here we put in our ADC readings //Alocate 64 bytes
+.equ        CarLane =0x0b5
 .equ        TURNMAG=8
 
 .equ        BUFFERSIZE=32
@@ -337,7 +338,7 @@ GETTIME: ;Send the current time
     cpi         R20,0xfe
     brsh        INCREASE_GETTIME
     rjmp        END_INC_GETTIME
-    INCREASE_   GETTIME:
+    INCREASE_GETTIME:
     CLC
     inc         R22
     brne        END_INC_GETTIME
@@ -453,25 +454,48 @@ AUTOMODE:
 ;*********
 
 
-ldi         R18,0x70 //Base speed in Automode
+
 AutoModeLoop:
-    ;dec        R18   ;Do some artimitic, this is just a placeholder
+    lds         R19,AutoModeState
+    cpi         R19,0x00
+    brne        PC+2
+    CALL        AUTOMAP
+    cpi         R19,0x01
+    brne        PC+2
+    CALL        CALCULATE
+    cpi         R19,0x02
+    brne        PC+2
+    CALL        DRIVE
+AutoModeEnd:
+    jmp AutoModeLoop
+
+AUTOMAP:
+    push        R18
+    push        R20
+    ldi         R18,0x70
     out         OCR2,R18
     CALL        MakeAverage
     cpi         R20,127+TURNMAG
     BRLO        PC+4
     CALL        LEFTSWING
-    rjmp        AutoModeEnd
+    rjmp        AUTOMAPEND
     cpi         R20,127-TURNMAG+1
     BRSH        PC+4
     CALL        RIGHTSWING
-    rjmp        AutoModeEnd
+    rjmp        AUTOMAPEND
     CALL        STRAIGHT
+    
+    AUTOMAPEND:
+    pop         R20
+    pop         R18
+ret
 
-AutoModeEnd:
-    jmp AutoModeLoop
+CALCULATE:      ;//Does nothing
+ret
 
-
+DRIVE:
+ret             ;//Does nothing
+    
 LEFTSWING:
     push        R20
     push        R21
