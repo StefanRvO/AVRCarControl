@@ -11,8 +11,9 @@
 .equ        CurReading=0x072
 .equ        ReadingsCur1=0x073 ;//high pointer adress
 .equ        ReadingsCur2=0x074 ;//Low pointer adress
-.equ        Readings=0x075 ; Here we put in our ADC readings //Alocate 64 bytes
-.equ        CarLane =0x0b5
+.equ        TurnCount=0x075
+.equ        Readings=0x076 ; Here we put in our ADC readings //Alocate 64 bytes
+.equ        CarLane =0x0b6
 .equ        TURNMAG=8
 
 .equ        BUFFERSIZE=32
@@ -24,7 +25,7 @@
 .org        0x0060
 Reset:
 .include    "SetupStack.asm"       ;setup the stack
-.include    "SetupSerial16Mhz.asm"      ;setup serial connection
+.include    "SetupSerial.asm"      ;setup serial connection
 .include    "SetupIO.asm"
 .include    "SetupTime.asm"
 .include    "SetupADC.asm"
@@ -39,6 +40,7 @@ Reset:
     sts MotorSensorCount1,R16 ;Clear motor counter
     sts MotorSensorCount2,R16 ;Clear motor counter
     sts MotorSensorCount3,R16 ;Clear motor counter
+    sts AutoModeState,R16
     ldi R16,HIGH(Readings)
     sts ReadingsCur1,R16
     ldi R16,LOW(Readings)
@@ -75,7 +77,7 @@ T1_OVFLW:
 reti
 
 ;******************
-;***********INT1,MOTOR SENSOR
+;***********INT0,MOTOR SENSOR
 ;******************
 INT0_ISR:
     push        R16
@@ -103,12 +105,23 @@ INT0_ISR:
 RETI
 
 INT1_ISR:
-    ;CALL 	        GETMOTORCOUNTER ;Print Out Motor counter
-    CALL	        GETTIME
-    ldi 	        R16,0x00
-    sts             MotorSensorCount1,R16
-    sts             MotorSensorCount2,R16
-    sts             MotorSensorCount3,R16
+    push        R16
+    in          R16,SREG
+    push        R16
+    CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
+    ;CALL	    GETTIME
+    lds         R16,AutoModeState
+    cpi         R16,0x00
+    brne        PC+2
+    inc         R16
+    ldi 	    R16,0x00
+    sts         MotorSensorCount1,R16
+    sts         MotorSensorCount2,R16
+    sts         MotorSensorCount3,R16
+    
+    pop         R16
+    out         SREG,R16
+    pop         R16
 reti 	
 
 ;*******************
@@ -250,32 +263,46 @@ SET:
     CPI         R17,0x12
     BRNE        PC+2
     CALL        AUTOMODE
-    cpi         R17,0x13 ;accell loop, continuesly send accelerometer data
+    CPI         R17,0x13 ;accell loop, continuesly send accelerometer data
     BRNE        PC+2
     CALL        GetACCELLoop
-RET
+RET     
 ;*********
 ;****************GETMODE
 GET:
-    cpi         R17,0x10 ;Get speed
-    brne        PC+2
+    CPI         R17,0x10
+    BREQ        CALL1
+    CPI         R17,0x11
+    BREQ        CALL2
+    CPI         R17,0x12
+    BREQ        CALL3
+    CPI         R17,0x13
+    BREQ        CALL4
+    CPI         R17,0x14
+    BREQ        CALL5
+    CPI         R17,0x15
+    BREQ        CALL6
+    RET
+    
+    
+    CALL1:
     CALL        GETSPEED
-    cpi         R17,0x11 ;Get stop
-    brne        PC+2
+    RET
+    CALL2:
     CALL        GETSTOP
-    cpi         R17,0x12    ;Get automode
-    brne        PC+2
+    RET
+    CALL3:
     CALL        GETAUTOMODE
-    cpi         R17,0x14
-    brne        PC+2
-    call        GETACCEL
-    cpi         R17,0x15
-    brne        PC+2
-    call        GETMOTORCOUNTER
-    cpi         R17,0x16    ;Get timer status
-    brne        PC+2
+    RET
+    CALL4:
+    CALL        GETMOTORCOUNTER
+    RET
+    CALL5:
     CALL        GETTIME
-RET
+    RET
+    CALL6:
+    CALL        GETACCEL
+    RET
 ;******************
 GETSPEED:
     push        R20
@@ -295,11 +322,9 @@ ret
 
 
 GETSTOP:
-    nop ;Does nothing ATM
 ret
 
 GETAUTOMODE:
-    nop ;Does nothing ATM
 ret
 
 GETACCEL:
@@ -442,7 +467,9 @@ STOP:
 ;*********
     ldi         R18,0x00
     out         OCR2,R18
-    jmp         GetACCELLoop
+    jmp         Main
+PLACEHOLD:
+ret
 
 AUTOMODE:
 ;GET OUT OF INTERRUPT MODE, clear the stack 
@@ -495,14 +522,34 @@ ret
 
 DRIVE:
 ret             ;//Does nothing
+
+BRAKE: ;//Brakes for the number of Timer 1 overflows in R16 //Max inaccuracy=2^16 cycles≃4,096ms
+                    ;Max Braketime≃1s //Just loop if more is needed
+    push    R17
+    cpi R16,0x00
+    breq ENDBRAKE
+    SBI PORTB,0
+    lds R17,T1_Counter1
+    add R16,R17
+    WAITLOOP:
+        lds R17,T1_Counter1
+        cp  R16,R17
+        brne WAITLOOP
+    ENDBRAKE:
+    CBI PORTB,0
+    pop R17
+ret
     
 LEFTSWING:
+    push        R16
     push        R20
     push        R21
     push        R22
     push        ZL
     push        ZH
-    ldi         R20,0xbf
+    ;ldi         R16,0xf0
+    ;call        brake
+    ldi         R20,0xa0
     out         OCR2,R20
     ldi         R20,0x0F
     sts         TransMsg,R20
@@ -547,6 +594,7 @@ rjmp LEFTSWINGWAIT
     pop         R22
     pop         R21
     pop         R20
+    pop         R16
 ret
 
 RIGHTSWING:
@@ -555,7 +603,7 @@ RIGHTSWING:
     push        R22
     push        ZL
     push        ZH
-    ldi         R20,0xbf
+    ldi         R20,0xa0
     out         OCR2,R20
     ldi         R20,0x0F
     sts         TransMsg,R20
