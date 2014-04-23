@@ -25,7 +25,7 @@
 .org        0x0060
 Reset:
 .include    "SetupStack.asm"       ;setup the stack
-.include    "SetupSerial.asm"      ;setup serial connection
+.include    "SetupSerial16Mhz.asm"      ;setup serial connection
 .include    "SetupIO.asm"
 .include    "SetupTime.asm"
 .include    "SetupADC.asm"
@@ -45,6 +45,8 @@ Reset:
     sts ReadingsCur1,R16
     ldi R16,LOW(Readings)
     sts ReadingsCur2,R16
+    ldi R16,0x00
+    CALL    UNBRAKE
     jmp     Main
     
 ;****
@@ -266,6 +268,12 @@ SET:
     CPI         R17,0x13 ;accell loop, continuesly send accelerometer data
     BRNE        PC+2
     CALL        GetACCELLoop
+    CPI         R17,0x14 ;BRAKE
+    BRNE        PC+2
+    CALL        BRAKELOOP
+    CPI         R17,0x15 ;UNBRAKE
+    BRNE        PC+2
+    CALL        UNBRAKE
 RET     
 ;*********
 ;****************GETMODE
@@ -523,20 +531,41 @@ ret
 DRIVE:
 ret             ;//Does nothing
 
-BRAKE: ;//Brakes for the number of Timer 1 overflows in R16 //Max inaccuracy=2^16 cycles≃4,096ms
+UNBRAKE:
+    CBI PORTB,2
+ret
+
+BRAKETIME: ;//Brakes for the number of Timer 1 overflows in R16 //Max inaccuracy=2^16 cycles≃4,096ms
                     ;Max Braketime≃1s //Just loop if more is needed
     push    R17
     cpi R16,0x00
-    breq ENDBRAKE
-    SBI PORTB,0
+    breq ENDBRAKETIME
+    SBI PORTB,2
     lds R17,T1_Counter1
     add R16,R17
-    WAITLOOP:
+    WAITLOOP_BRAKETIME:
         lds R17,T1_Counter1
         cp  R16,R17
-        brne WAITLOOP
-    ENDBRAKE:
-    CBI PORTB,0
+        brne WAITLOOP_BRAKETIME
+    ENDBRAKETIME:
+    CBI PORTB,2
+    pop R17
+ret
+
+BRAKEDIST: ;//Brakes for the number of Motor turns  in R16 
+                    
+    push    R17
+    cpi R16,0x00
+    breq ENDBRAKEDIST
+    SBI PORTB,2
+    lds R17,MotorSensorCount1
+    add R16,R17
+    WAITLOOP_BRAKEDIST:
+        lds R17,MotorSensorCount1
+        cp  R16,R17
+        brne WAITLOOP_BRAKEDIST
+    ENDBRAKEDIST:
+    CBI PORTB,2
     pop R17
 ret
     
@@ -547,10 +576,10 @@ LEFTSWING:
     push        R22
     push        ZL
     push        ZH
-    ;ldi         R16,0xf0
-    ;call        brake
-    ldi         R20,0xa0
-    out         OCR2,R20
+    ;ldi         R16,0x0f
+    ;call        BRAKEDIST
+    ;ldi         R20,0xa0
+    ;out         OCR2,R20
     ldi         R20,0x0F
     sts         TransMsg,R20
     ldi         R20,1
@@ -603,8 +632,8 @@ RIGHTSWING:
     push        R22
     push        ZL
     push        ZH
-    ldi         R20,0xa0
-    out         OCR2,R20
+    ;ldi         R20,0xa0
+    ;out         OCR2,R20
     ldi         R20,0x0F
     sts         TransMsg,R20
     ldi         R20,1
@@ -669,6 +698,16 @@ GetACCELLoopLoop:
     CALL        GETACCEL
 rjmp GetACCELLoopLoop
 
-;;Kør motor sensor ind på T0 ben og sæt rise on falling edge. Timer interrupt sættes med OCR0.
-; Dermed Vil vi kunne vælge  at få et interrupt pr. x omdrejning. 0<x<(255/3)
-;GOD LØSNING!!! Måske ikke nødvendig
+BRAKELOOP:
+;GET OUT OF INTERRUPT MODE, clear the stack 
+		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
+		out		SPH, R16                ;ANOTHER
+		ldi		R16, LOW(RAMEND)        ;SOLUTION
+		out		SPL, R16                ;IS NEEDED!!
+	    sei		
+BRAKELOOPLOOP:	    
+    ldi R16,0xff
+    CALL BRAKETIME
+rjmp BRAKELOOPLOOP
+
+

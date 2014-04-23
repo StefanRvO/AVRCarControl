@@ -7,6 +7,8 @@ ldi     R16,0b01010101
 out     PORTB,R16
 ;Set MOTOR pin as output
 SBI     DDRD,7
+;Set brake pin as output
+SBI DDRB,2
 ldi     R19,0       ;Turn motor off
 out     OCR2,R19
 ldi     R19, 1<<6 | 1<<COM01 | 0<<CS02 | 0<<CS01 | 1<<CS00

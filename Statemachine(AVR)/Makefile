@@ -5,7 +5,10 @@ PROGRAMMER=-c avrispmkII -P usb # For the large blue AVR MKII
 
 default:
 	avra $(PROJECT).asm
-	sudo avrdude -p m32 $(PROGRAMMER) -U flash:w:$(PROJECT).hex
+	sudo avrdude -p m32 $(PROGRAMMER) -U flash:w:$(PROJECT).hex 
 
 clean:
 	rm -f $(PROJECT).obj $(PROJECT).hex $(PROJECT).cof $(PROJECT).eep.hex
+	
+fuse:
+	sudo avrdude -p m32 $(PROGRAMMER) -U hfuse:w:0x99:m -U lfuse:w:0xff:m 
