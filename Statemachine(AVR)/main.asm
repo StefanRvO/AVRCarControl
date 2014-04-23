@@ -7,13 +7,15 @@
 .equ        TransNum =0x066
 .equ        TransMSG = 0x067 ;//Alocate 10 bytes
 .equ        END_ = 0xFF
-.equ        AutoModeState=0x071 ;//States: 0x00=Mapping. First lap, 0x01==Calculate, 0x02=Drive
+.equ        AutoModeState=0x071 ;//States: 0x10=Mapping. First lap, 0x11==Calculate, 0x12=Drive
 .equ        CurReading=0x072
-.equ        ReadingsCur1=0x073 ;//high pointer adress
-.equ        ReadingsCur2=0x074 ;//Low pointer adress
-.equ        TurnCount=0x075
-.equ        Readings=0x076 ; Here we put in our ADC readings //Alocate 64 bytes
-.equ        CarLane =0x0b6
+.equ        LanePointerH=0x073 ;//high pointer adress
+.equ        LanePointerL=0x074 ;//Low pointer adress
+.equ        LanePointerENDH=0x075
+.equ        LanePointerENDL=0x076
+.equ        TurnCount=0x077
+.equ        Readings=0x078 ; Here we put in our ADC readings //Alocate 64 bytes
+.equ        CarLane =0x0b8 ; Here we put  the mapping
 .equ        TURNMAG=8
 
 .equ        BUFFERSIZE=32
@@ -41,10 +43,10 @@ Reset:
     sts MotorSensorCount2,R16 ;Clear motor counter
     sts MotorSensorCount3,R16 ;Clear motor counter
     sts AutoModeState,R16
-    ldi R16,HIGH(Readings)
-    sts ReadingsCur1,R16
-    ldi R16,LOW(Readings)
-    sts ReadingsCur2,R16
+    ldi R16,HIGH(CarLane)
+    sts LanePointerH,R16
+    ldi R16,LOW(CarLane)
+    sts LanePointerL,R16
     ldi R16,0x00
     CALL    UNBRAKE
     jmp     Main
@@ -112,10 +114,29 @@ INT1_ISR:
     push        R16
     CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
     ;CALL	    GETTIME
+    
     lds         R16,AutoModeState
-    cpi         R16,0x00
-    brne        PC+2
+    cpi         R16,0x10
+    brne        ENDAutoStateChange
     inc         R16
+    sts         AutoModeState,R16
+    
+    lds         R20,MotorSensorCount1
+    lds         R21,MotorSensorCount2
+    lds         R22,MotorSensorCount3
+    lds         ZH,LanePointerH
+    lds         ZL,LanePointerL
+    sts         LanePointerENDH,ZH
+    sts         LanePointerENDL,ZL
+    ldi         R16,0xff
+    ST          Z+,R16
+    
+    ST          Z+,R20
+    ST          Z+,R21
+    ST          Z+,R22
+    
+    ENDAutoStateChange:
+    
     ldi 	    R16,0x00
     sts         MotorSensorCount1,R16
     sts         MotorSensorCount2,R16
@@ -488,7 +509,10 @@ AUTOMODE:
 	    sei		
 ;*********
 
-
+ldi         R16,HIGH(CarLane)
+sts         LanePointerH,R16
+ldi         R16,LOW(CarLane)
+sts         LanePointerL,R16
 
 AutoModeLoop:
     lds         R19,AutoModeState
@@ -526,9 +550,22 @@ AUTOMAP:
 ret
 
 CALCULATE:      ;//Does nothing
+    push        R19
+    lds         R19,AutoModeState
+    inc         R19
+    sts         AutoModeState,R19
+    pop R19
 ret
 
 DRIVE:
+push        R16
+ldi         R16,HIGH(CarLane)
+sts         LanePointerH,R16
+ldi         R16,LOW(CarLane)
+sts         LanePointerL,R16
+pop         R16
+
+
 ret             ;//Does nothing
 
 UNBRAKE:
@@ -576,10 +613,9 @@ LEFTSWING:
     push        R22
     push        ZL
     push        ZH
-    ;ldi         R16,0x0f
-    ;call        BRAKEDIST
-    ;ldi         R20,0xa0
-    ;out         OCR2,R20
+    lds         R20,TurnCount
+    inc         R20
+    sts         TurnCount,R20
     ldi         R20,0x0F
     sts         TransMsg,R20
     ldi         R20,1
@@ -591,14 +627,15 @@ LEFTSWING:
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
-    lds         ZH,ReadingsCur1
-    lds         ZL,ReadingsCur2
-
+    lds         ZH,LanePointerH
+    lds         ZL,LanePointerL
+    
+    ldi         R16,0x0f
+    ST          Z+,R16
+    
     ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    ldi         R20,0x0f
-    ST          Z+,R20
     
 LEFTSWINGWAIT:
         CALL            MakeAverage
@@ -609,13 +646,16 @@ rjmp LEFTSWINGWAIT
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
+    
+    ldi         R16,0x0f
+    ST          Z+,R16
+    
     ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    ldi         R20,0x0f
-    ST          Z+,R20
-    sts         ReadingsCur1,ZH
-    sts         ReadingsCur2,ZL
+    
+    sts         LanePointerH,ZH
+    sts         LanePointerL,ZL
 
 
     pop         ZH
@@ -627,13 +667,15 @@ rjmp LEFTSWINGWAIT
 ret
 
 RIGHTSWING:
+    push        R16
     push        R20
     push        R21
     push        R22
     push        ZL
     push        ZH
-    ;ldi         R20,0xa0
-    ;out         OCR2,R20
+    lds         R20,TurnCount
+    inc         R20
+    sts         TurnCount,R20
     ldi         R20,0x0F
     sts         TransMsg,R20
     ldi         R20,1
@@ -645,14 +687,16 @@ RIGHTSWING:
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
-    lds         ZH,ReadingsCur1
-    lds         ZL,ReadingsCur2
+    lds         ZH,LanePointerH
+    lds         ZL,LanePointerL
 
+    ldi         R16,0xf0
+    ST          Z+,R16
+    
     ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    ldi         R20,0xf0
-    ST          Z+,R20
+    
     RIGHTSWINGWAIT:
         CALL        MakeAverage
         cpi         R20,127-(TURNMAG/2)+1
@@ -661,19 +705,23 @@ RIGHTSWING:
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
+    
+    ldi         R16,0xf0
+    ST          Z+,R16
+    
     ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    ldi         R20,0xf0
-    ST          Z+,R20
-    sts         ReadingsCur1,ZH
-    sts         ReadingsCur2,ZL
+    
+    sts         LanePointerH,ZH
+    sts         LanePointerL,ZL
 
     pop         ZH
     pop         ZL
     pop         R22
     pop         R21
     pop         R20
+    pop         R16
 ret
 
 STRAIGHT:
