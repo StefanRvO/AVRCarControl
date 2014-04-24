@@ -17,6 +17,7 @@
 .equ        Readings=0x078 ; Here we put in our ADC readings //Alocate 64 bytes
 .equ        CarLane =0x0b8 ; Here we put  the mapping
 .equ        TURNMAG=8
+.equ        BRAKELENGHT=20
 
 .equ        BUFFERSIZE=32
 .equ        ACCELADJUST=2
@@ -35,6 +36,7 @@ Reset:
 
     sei                         ;enable interrupts
     ldi R16,0x00
+    sts TurnCount,R16
     sts TransNum,R16
     sts T1_Counter1,R16  ;zero counter stuff
     sts T1_Counter2,R16  ;zero counter stuff
@@ -141,7 +143,8 @@ INT1_ISR:
     sts         MotorSensorCount1,R16
     sts         MotorSensorCount2,R16
     sts         MotorSensorCount3,R16
-    
+    ;CALL        DELAY
+    ;CALL        BRAKELOOP
     pop         R16
     out         SREG,R16
     pop         R16
@@ -370,6 +373,39 @@ GETACCEL:
     pop         R20
 RET
 
+SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
+    push        R22
+    push        R21
+    push        R20
+    
+    ;fetch motor counter
+    lds         R22,MotorSensorCount1
+    lds         R21,MotorSensorCount2
+    lds         R20,MotorSensorCount3
+    ;Put counter in TransMSG
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    ST          Z+,R20
+    ST          Z+,R21
+    ST          Z+,R22
+    lds         R20,TurnCount
+    ST          Z+,R20
+    lds         R20,LanePointerH
+    ST          Z+,R20
+    lds         R20,LanePointerL
+    ST          Z+,R20
+    ldi         R20,6
+    sts         TransNum,R20
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x17
+    CALL        TRANSREPLY
+    
+    pop         R20
+    pop         R21
+    pop         R22
+    ret
+
+
 
 GETTIME: ;Send the current time
     push        R19
@@ -513,16 +549,18 @@ ldi         R16,HIGH(CarLane)
 sts         LanePointerH,R16
 ldi         R16,LOW(CarLane)
 sts         LanePointerL,R16
+ldi         R16,0x10
+sts         AutoModeState,R16
 
 AutoModeLoop:
     lds         R19,AutoModeState
-    cpi         R19,0x00
+    cpi         R19,0x10
     brne        PC+2
     CALL        AUTOMAP
-    cpi         R19,0x01
+    cpi         R19,0x11
     brne        PC+2
     CALL        CALCULATE
-    cpi         R19,0x02
+    cpi         R19,0x12
     brne        PC+2
     CALL        DRIVE
 AutoModeEnd:
@@ -559,12 +597,62 @@ ret
 
 DRIVE:
 push        R16
+push        R17
+push        R18
+push        R19
+push        R20
+push        R21
+push        R22
+push        ZH
+push        ZL
 ldi         R16,HIGH(CarLane)
 sts         LanePointerH,R16
 ldi         R16,LOW(CarLane)
 sts         LanePointerL,R16
-pop         R16
 
+
+
+
+DRIVELOOP:
+        ;Set speed to 80
+ldi     R16,0x80
+out     OCR2,R16
+lds         R20,MotorSensorCount1
+lds         R21,MotorSensorCount2
+lds         R22,MotorSensorCount3
+lds         ZH,LanePointerH
+lds         ZL,LanePointerL
+
+LD          R16,Z+
+                  ;Read in MotorCounter at next turn
+LD          R16,Z+
+LD          R17,Z+
+LD          R18,Z+
+                ;Add BRAKELENGHT to current count
+ldi         R19,0x00
+;add         R20,BRAKELENGHT
+adc         R21,R19
+adc         R22,R19
+
+                ;Check if the numbers is equal
+cp      R16,R17
+cpc     R17,R21
+cpc     R18,R19
+brne DRIVELOOP
+CALL    SOONTURN
+jmp DRIVELOOP
+
+
+DRIVELOOPEND:
+pop         ZL
+pop         ZH
+pop         R22
+pop         R21
+pop         R20
+pop         R19
+pop         R18
+pop         R17
+pop         R16
 
 ret             ;//Does nothing
 
@@ -616,14 +704,14 @@ LEFTSWING:
     lds         R20,TurnCount
     inc         R20
     sts         TurnCount,R20
-    ldi         R20,0x0F
-    sts         TransMsg,R20
-    ldi         R20,1
-    sts         TransNum,R20
-    ldi         R20,0xbb
-    ldi         R21,0x12
-    CALL        TRANSREPLY
-
+    ;ldi         R20,0x0F
+    ;sts         TransMsg,R20
+    ;ldi         R20,1
+    ;sts         TransNum,R20
+    ;ldi         R20,0xbb
+    ;ldi         R21,0x12
+    ;CALL        TRANSREPLY
+    CALL        SWINGPING
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
@@ -676,14 +764,14 @@ RIGHTSWING:
     lds         R20,TurnCount
     inc         R20
     sts         TurnCount,R20
-    ldi         R20,0x0F
-    sts         TransMsg,R20
-    ldi         R20,1
-    sts         TransNum,R20
-    ldi         R20,0xbb
-    ldi         R21,0x12
-    CALL        TRANSREPLY
-
+    ;ldi         R20,0x0F
+    ;sts         TransMsg,R20
+    ;ldi         R20,1
+    ;sts         TransNum,R20
+    ;ldi         R20,0xbb
+    ;ldi         R21,0x12
+    ;CALL        TRANSREPLY
+    CALL        SWINGPING
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
@@ -732,6 +820,8 @@ ret
 ;******
 Main:
 MainLoop:
+ldi R16,0x00
+sts AutoModeState,R16
 RJMP        MainLoop
 
 
@@ -756,6 +846,44 @@ BRAKELOOP:
 BRAKELOOPLOOP:	    
     ldi R16,0xff
     CALL BRAKETIME
+    
 rjmp BRAKELOOPLOOP
+
+
+DELAY:
+push R17
+push R18
+ldi R17,0xff
+ldi R18,0x0f
+DELAYLOOP:
+dec R17
+breq R18DEC
+rjmp DELAYLOOP
+R18DEC:
+dec R18
+breq DELAYEND
+ldi R17,0xff
+rjmp DELAYLOOP
+DELAYEND:
+pop R18
+pop R17
+ret
+
+
+SOONTURN: ;//Prepare for the turn in a sec
+push R16
+
+; ADD 4 to z pointer
+ADIW ZL,4
+;Save to ram
+sts         LanePointerH,ZH
+sts         LanePointerL,ZL
+
+;Break in 40 ms
+ldi R16,10
+CALL BRAKETIME
+CALL GETMOTORCOUNTER
+pop R16
+ret
 
 
