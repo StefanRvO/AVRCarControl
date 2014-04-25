@@ -7,12 +7,16 @@ ldi     R16,0b01010101
 out     PORTB,R16
 ;Set MOTOR pin as output
 SBI     DDRD,7
+;Set Magnet pin as output
+SBI     DDRB,3
 ;Set brake pin as output
 SBI DDRB,2
 ldi     R19,0       ;Turn motor off
 out     OCR2,R19
+out     OCR0,R19
 ldi     R19, 1<<6 | 1<<COM01 | 0<<CS02 | 0<<CS01 | 1<<CS00
-out     TCCR2,R19   ;Phase corrected PWM, no prescale ;We use timer 2
+out     TCCR2,R19   ;Phase corrected PWM, no prescale ;Timer2+Timer0
+out     TCCR0,R19
 ;interrupt on falling edge
 ldi	R16,(1<<ISC01) | (1<<ISC00) | (1<<ISC11) | (1<<ISC10) 
 out	MCUCR,R16

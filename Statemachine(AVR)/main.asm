@@ -28,7 +28,7 @@
 .org        0x0060
 Reset:
 .include    "SetupStack.asm"       ;setup the stack
-.include    "SetupSerial16Mhz.asm"      ;setup serial connection
+.include    "SetupSerial.asm"      ;setup serial connection
 .include    "SetupIO.asm"
 .include    "SetupTime.asm"
 .include    "SetupADC.asm"
@@ -52,7 +52,12 @@ Reset:
     ldi R16,0x00
     CALL    UNBRAKE
     jmp     Main
-    
+
+
+;ROUTINES INCLUDES
+.include "MotorAndBrakeControl.asm"
+
+
 ;****
 ;ROUTINES
 ;****
@@ -110,11 +115,16 @@ INT0_ISR:
     pop         R16
 RETI
 
-INT1_ISR:
+INT1_ISR: ;//Line sensor...
     push        R16
     in          R16,SREG
     push        R16
-    CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
+    push        R20
+    push        R21
+    push        R22
+    push        ZL
+    push        ZH
+    ;CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
     ;CALL	    GETTIME
     
     lds         R16,AutoModeState
@@ -145,6 +155,11 @@ INT1_ISR:
     sts         MotorSensorCount3,R16
     ;CALL        DELAY
     ;CALL        BRAKELOOP
+    pop         ZH
+    pop         ZL
+    pop         R22
+    pop         R21
+    pop         R20
     pop         R16
     out         SREG,R16
     pop         R16
@@ -294,10 +309,13 @@ SET:
     CALL        GetACCELLoop
     CPI         R17,0x14 ;BRAKE
     BRNE        PC+2
-    CALL        BRAKELOOP
+    CALL        BRAKE
     CPI         R17,0x15 ;UNBRAKE
     BRNE        PC+2
     CALL        UNBRAKE
+    CPI         R17,0x16 ;SETMAG
+    BRNE        PC+2
+    CALL        SETMAG
 RET     
 ;*********
 ;****************GETMODE
@@ -507,32 +525,13 @@ TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from
     TRANSREPLYEXIT:
 RET
 ;***************
+SETMAG:
 
-SETSPEED:
+    out OCR0,R18
+    ret
 
-;GET OUT OF INTERRUPT MODE, clear the stack 
-		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
-		out		SPH, R16                ;ANOTHER
-		ldi		R16, LOW(RAMEND)        ;SOLUTION
-		out		SPL, R16                ;IS NEEDED!!
-	    sei		
-;*********
 
-    nop ;convert from 0-100 to 0-255 // Not done
-    out         OCR2,R18
-    jmp         Main ; SET motor speed dependent on R18 value
 
-STOP:
-;GET OUT OF INTERRUPT MODE, clear the stack 
-		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
-		out		SPH, R16                ;ANOTHER
-		ldi		R16, LOW(RAMEND)        ;SOLUTION
-		out		SPL, R16                ;IS NEEDED!!
-	    sei		
-;*********
-    ldi         R18,0x00
-    out         OCR2,R18
-    jmp         Main
 PLACEHOLD:
 ret
 
@@ -629,8 +628,9 @@ LD          R16,Z+
 LD          R17,Z+
 LD          R18,Z+
                 ;Add BRAKELENGHT to current count
+ldi         R19,BRAKELENGHT
+add         R20,R19
 ldi         R19,0x00
-;add         R20,BRAKELENGHT
 adc         R21,R19
 adc         R22,R19
 
@@ -656,43 +656,9 @@ pop         R16
 
 ret             ;//Does nothing
 
-UNBRAKE:
-    CBI PORTB,2
-ret
 
-BRAKETIME: ;//Brakes for the number of Timer 1 overflows in R16 //Max inaccuracy=2^16 cycles≃4,096ms
-                    ;Max Braketime≃1s //Just loop if more is needed
-    push    R17
-    cpi R16,0x00
-    breq ENDBRAKETIME
-    SBI PORTB,2
-    lds R17,T1_Counter1
-    add R16,R17
-    WAITLOOP_BRAKETIME:
-        lds R17,T1_Counter1
-        cp  R16,R17
-        brne WAITLOOP_BRAKETIME
-    ENDBRAKETIME:
-    CBI PORTB,2
-    pop R17
-ret
 
-BRAKEDIST: ;//Brakes for the number of Motor turns  in R16 
-                    
-    push    R17
-    cpi R16,0x00
-    breq ENDBRAKEDIST
-    SBI PORTB,2
-    lds R17,MotorSensorCount1
-    add R16,R17
-    WAITLOOP_BRAKEDIST:
-        lds R17,MotorSensorCount1
-        cp  R16,R17
-        brne WAITLOOP_BRAKEDIST
-    ENDBRAKEDIST:
-    CBI PORTB,2
-    pop R17
-ret
+
     
 LEFTSWING:
     push        R16
@@ -836,18 +802,6 @@ GetACCELLoopLoop:
     CALL        GETACCEL
 rjmp GetACCELLoopLoop
 
-BRAKELOOP:
-;GET OUT OF INTERRUPT MODE, clear the stack 
-		ldi		R16, HIGH(RAMEND)       ;THIS IS UGLY
-		out		SPH, R16                ;ANOTHER
-		ldi		R16, LOW(RAMEND)        ;SOLUTION
-		out		SPL, R16                ;IS NEEDED!!
-	    sei		
-BRAKELOOPLOOP:	    
-    ldi R16,0xff
-    CALL BRAKETIME
-    
-rjmp BRAKELOOPLOOP
 
 
 DELAY:
@@ -879,8 +833,8 @@ ADIW ZL,4
 sts         LanePointerH,ZH
 sts         LanePointerL,ZL
 
-;Break in 40 ms
-ldi R16,10
+;Break in 1000 ms
+ldi R16,0xff
 CALL BRAKETIME
 CALL GETMOTORCOUNTER
 pop R16

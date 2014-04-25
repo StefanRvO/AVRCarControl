@@ -11,4 +11,4 @@ clean:
 	rm -f $(PROJECT).obj $(PROJECT).hex $(PROJECT).cof $(PROJECT).eep.hex
 	
 fuse:
-	sudo avrdude -p m32 $(PROGRAMMER) -U hfuse:w:0x99:m -U lfuse:w:0xff:m 
+	sudo avrdude -p m32 $(PROGRAMMER) -U hfuse:w:0x9E:m -U lfuse:w:0x3f:m  -U lock:w:0x3f:m -U efuse:w:0xee:m 
