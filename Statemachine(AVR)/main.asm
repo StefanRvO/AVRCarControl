@@ -33,6 +33,7 @@ Reset:
 ;ROUTINES INCLUDES
 .include "MotorAndBrakeControl.asm"
 .include "ADCRoutines.asm"
+.include "AutoModeRoutines.asm"
 
 
 ;****
