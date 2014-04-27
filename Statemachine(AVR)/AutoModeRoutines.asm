@@ -96,34 +96,34 @@ DRIVE:
 
 
         DRIVELOOP:
-                ;Set speed to 80
-        ldi     R16,0x80
-        out     OCR2,R16
-        lds         R20,MotorSensorCount1
-        lds         R21,MotorSensorCount2
-        lds         R22,MotorSensorCount3
-        lds         ZH,LanePointerH
-        lds         ZL,LanePointerL
+                    ;Set speed to 80
+            ldi     R16,0x80
+            out     OCR2,R16
+            lds         R20,MotorSensorCount1
+            lds         R21,MotorSensorCount2
+            lds         R22,MotorSensorCount3
+            lds         ZH,LanePointerH
+            lds         ZL,LanePointerL
 
-        LD          R16,Z+
-                          ;Read in MotorCounter at next turn
-        LD          R16,Z+
-        LD          R17,Z+
-        LD          R18,Z+
-                        ;Add BRAKELENGHT to current count
-        ldi         R19,BRAKELENGHT
-        add         R20,R19
-        ldi         R19,0x00
-        adc         R21,R19
-        adc         R22,R19
+            LD          R16,Z+ ;//ignore turntype atm
+                              ;Read in MotorCounter at next turn
+            LD          R16,Z+
+            LD          R17,Z+
+            LD          R18,Z+
+                            ;Add BRAKELENGHT to current count
+            ldi         R19,BRAKELENGHT
+            add         R20,R19
+            ldi         R19,0x00
+            adc         R21,R19
+            adc         R22,R19
 
-                        ;Check if the numbers is equal
-        cp      R16,R17
-        cpc     R17,R21
-        cpc     R18,R19
-        brne DRIVELOOP
-        CALL    SOONTURN
-        jmp DRIVELOOP
+                            ;Check if the numbers is equal
+            cp      R16,R20
+            cpc     R17,R21
+            cpc     R18,R22
+            brne DRIVELOOP
+            CALL    SOONTURN
+        rjmp DRIVELOOP
 
 
     DRIVELOOPEND:
@@ -154,19 +154,12 @@ LEFTSWING:
     lds         R20,TurnCount
     inc         R20
     sts         TurnCount,R20
-    ;ldi         R20,0x0F
-    ;sts         TransMsg,R20
-    ;ldi         R20,1
-    ;sts         TransNum,R20
-    ;ldi         R20,0xbb
-    ;ldi         R21,0x12
-    ;CALL        TRANSREPLY
     CALL        SWINGPING
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
-    lds         ZH,LanePointerH
     lds         ZL,LanePointerL
+    lds         ZH,LanePointerH
     
     ldi         R16,0x0f
     ST          Z+,R16
@@ -219,19 +212,12 @@ RIGHTSWING:
     lds         R20,TurnCount
     inc         R20
     sts         TurnCount,R20
-    ;ldi         R20,0x0F
-    ;sts         TransMsg,R20
-    ;ldi         R20,1
-    ;sts         TransNum,R20
-    ;ldi         R20,0xbb
-    ;ldi         R21,0x12
-    ;CALL        TRANSREPLY
     CALL        SWINGPING
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
-    lds         ZH,LanePointerH
     lds         ZL,LanePointerL
+    lds         ZH,LanePointerH
 
     ldi         R16,0xf0
     ST          Z+,R16
@@ -274,3 +260,25 @@ ret
 
 STRAIGHT:
 ret
+
+;##############################################
+;###############SOONTURN#######################
+;##############################################
+
+
+SOONTURN: ;//Prepare for the turn in a sec
+    push R16
+
+    ; ADD 4 to z pointer
+    ADIW ZL,4
+    ;Save to ram
+    sts         LanePointerH,ZH
+    sts         LanePointerL,ZL
+
+    ;Break in 1000 ms
+    ldi R16,0xff
+    CALL BRAKETIME
+    CALL GETMOTORCOUNTER
+    pop R16
+ret
+
