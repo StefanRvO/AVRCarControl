@@ -14,8 +14,10 @@
 .equ        LanePointerENDH=0x075
 .equ        LanePointerENDL=0x076
 .equ        TurnCount=0x077
-.equ        Readings=0x078 ; Here we put in our ADC readings //Alocate 64 bytes
-.equ        CarLane =0x0b8 ; Here we put  the mapping
+.equ        MotorTime1=0x078 ;Five bytes long
+.equ        MotorTime2=0x07D ; Five bytes long
+.equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 64 bytes
+.equ        CarLane =0x0c2 ; Here we put  the mapping
 .equ        TURNMAG=8
 .equ        BRAKELENGHT=20
 
@@ -75,6 +77,9 @@ INT0_ISR:
     push        R16
     push        R17
     push        R18
+    push        R19
+    push        R20
+    push        R21
     lds         R16,MotorSensorCount1 ;Read in motor counter
     lds         R17,MotorSensorCount2 ;Read in motor counter
     lds         R18,MotorSensorCount3 ;Read in motor counter
@@ -87,6 +92,54 @@ INT0_ISR:
     sts         MotorSensorCount1,R16
     sts         MotorSensorCount2,R17
     sts         MotorSensorCount3,R18
+    
+    ;Move previous time to position 1
+    lds     R16,MotorTime2
+    lds     R17,MotorTime2+1
+    lds     R18,MotorTime2+2
+    lds     R19,MotorTime2+3
+    lds     R20,MotorTime2+4
+    sts     MotorTime1,R16
+    sts     MotorTime1+1,R17
+    sts     MotorTime1+2,R18
+    sts     MotorTime1+3,R19
+    sts     MotorTime1+4,R20
+    ;Fetch current time
+    
+    lds         R16,T1_Counter1     ;what if timer overflows while in interrupt?
+    lds         R17,T1_Counter2
+    lds         R18,T1_Counter3
+    in          R20,TCNT1L
+    in          R21,TCNT1H
+    in          R19,TIFR
+    SBRS        R19	,TOV1 ;Increment  if we have a overflow
+    rjmp        END_INC_GETTIME_INT0
+    cpi         R21,0xff
+    brne        INCREASE_GETTIME_INT0 ;routine is partly ripped of from arduino's micros() code
+    cpi         R20,0xfe
+    brsh        INCREASE_GETTIME_INT0
+    rjmp        END_INC_GETTIME_INT0
+    INCREASE_GETTIME_INT0:
+    CLC
+    inc         R16
+    brne        END_INC_GETTIME_INT0
+    inc         R17
+    brne        END_INC_GETTIME_INT0
+    inc         R18
+    END_INC_GETTIME_INT0:  
+    ;fetch done
+    
+    ;Store into ram
+    sts     MotorTime2,R18
+    sts     MotorTime2+1,R17
+    sts     MotorTime2+2,R16
+    sts     MotorTime2+3,R21
+    sts     MotorTime2+4,R20
+    
+    
+    pop         R21
+    pop         R20
+    pop         R19
     pop         R18
     pop         R17
     pop         R16
@@ -227,6 +280,8 @@ GET:
     BREQ        CALL5
     CPI         R17,0x15
     BREQ        CALL6
+    CPI         R17,0x16
+    BREQ        CALL7
     RET
     
     
@@ -247,6 +302,9 @@ GET:
     RET
     CALL6:
     CALL        GETACCEL
+    RET
+    CALL7:
+    CALL        GETSPEEDTIME
     RET
 ;******************
 

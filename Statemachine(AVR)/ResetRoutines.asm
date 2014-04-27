@@ -21,5 +21,16 @@
     ldi R16,LOW(CarLane)
     sts LanePointerL,R16
     ldi R16,0x00
+    sts MotorTime1,R16
+    sts MotorTime1+1,R16
+    sts MotorTime1+2,R16
+    sts MotorTime1+3,R16
+    sts MotorTime1+4,R16
+    sts MotorTime2,R16
+    sts MotorTime2+1,R16
+    sts MotorTime2+2,R16
+    sts MotorTime2+3,R16
+    sts MotorTime2+4,R16
+    ldi R16,0x00
     CALL    UNBRAKE
     jmp     Main

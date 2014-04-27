@@ -6,8 +6,12 @@
 
 
 GETSPEED:
+    push        ZL
+    push        ZH
     push        R20
     push        R21
+    ldi         R20,0xff
+    out         PORTB,R20
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
     ldi         ZL,low(TransMSG)
     in          R20,OCR2
@@ -19,6 +23,8 @@ GETSPEED:
     call        TRANSREPLY
     pop         R21
     pop         R22
+    pop         ZH
+    pop         ZL
 ret
 
 ;###################################################
@@ -62,6 +68,8 @@ SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     push        R22
     push        R21
     push        R20
+    push        ZL
+    push        ZH
     
     ;fetch motor counter
     lds         R22,MotorSensorCount1
@@ -84,7 +92,8 @@ SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     ldi         R20,0xBB ;Respond header
     ldi         R21,0x17
     CALL        TRANSREPLY
-    
+    pop         ZH
+    pop         ZL
     pop         R20
     pop         R21
     pop         R22
@@ -101,6 +110,8 @@ GETTIME: ;Send the current time
     push        R22
     push        R23
     push        R24
+    push        ZL
+    push        ZH
     ;fetch clock
     lds         R22,T1_Counter1     ;what if timer overflows while in interrupt?
     lds         R23,T1_Counter2
@@ -125,6 +136,7 @@ GETTIME: ;Send the current time
     END_INC_GETTIME:  
     ;fetch done
 
+        
 
     ;Put Time in TransMSG
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
@@ -139,6 +151,8 @@ GETTIME: ;Send the current time
     ldi         R20,0xBB ;Respond header
     ldi         R21,0x16
     CALL        TRANSREPLY
+    pop         ZH
+    pop         ZL
     pop         R24
     pop         R23
     pop         R22
@@ -154,6 +168,8 @@ GETMOTORCOUNTER: ;Send the motor counter
     push        R20
     push        R21
     push        R22
+    push        ZL
+    push        ZH
     ;fetch motor counter
     lds         R22,MotorSensorCount1
     lds         R21,MotorSensorCount2
@@ -169,16 +185,91 @@ GETMOTORCOUNTER: ;Send the motor counter
     ldi         R20,0xBB ;Respond header
     ldi         R21,0x15
     call        TRANSREPLY
+    pop         ZH
+    pop         ZL
     pop         R22
     pop         R21
     pop         R20
 ret
+
+;################################################
+;##################GETSPEED######################
+;################################################
+
+
+GETSPEEDTIME:
+    push    R10
+    push    R11
+    push    R12
+    push    R13
+    push    R14
+    push    R15
+    push    R16
+    push    R17
+    push    R18
+    push    R19
+    push    R20
+    push    R21
+    push    ZL
+    push    ZH
+    
+    lds     R10,MotorTime1
+    lds     R11,MotorTime1+1
+    lds     R12,MotorTime1+2
+    lds     R13,MotorTime1+3
+    lds     R14,MotorTime1+4
+    
+    lds     R15,MotorTime2
+    lds     R16,MotorTime2+1
+    lds     R17,MotorTime2+2
+    lds     R18,MotorTime2+3
+    lds     R19,MotorTime2+4
+    
+    sub    R19,R14
+    sbc    R18,R13
+    sbc    R17,R12
+    sbc    R16,R11
+    sbc    R15,R10
+    
+    
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    
+    ST          Z+,R15
+    ST          Z+,R16
+    ST          Z+,R17
+    ST          Z+,R18
+    ST          Z+,R19
+    ldi         R20,5
+    sts         TransNum,R20
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x16
+    call        TRANSREPLY
+    
+    pop     ZH
+    pop     ZL
+    pop     R21
+    pop     R20
+    pop     R19
+    pop     R18
+    pop     R17
+    pop     R16
+    pop     R15
+    pop     R14
+    pop     R13
+    pop     R12
+    pop     R11
+    pop     R10
+ret
+    
 
 ;###################################################
 ;##################TRANSREPLY#######################
 ;###################################################
 
 TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x301 and forward the number of bytes in 0x300
+    push        ZL
+    push        ZH
     SBIS        UCSRA,UDRE
     RJMP        TRANSREPLY
     out         UDR,R20
@@ -199,4 +290,6 @@ TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from
     out         UDR,R21
     rjmp        TRANSREPLYloop
     TRANSREPLYEXIT:
+    pop         ZH
+    pop         ZL
 RET
