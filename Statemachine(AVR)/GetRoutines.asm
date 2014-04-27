@@ -37,6 +37,19 @@ ret
 ;##################GETAUTOMODE######################
 ;###################################################
 GETAUTOMODE:
+    push    R19
+    push    R20
+    push    R21
+    lds     R19,AutoModeState
+    sts     TransMSG,R19
+    ldi     R19,1
+    sts     TransNum,R19
+    ldi     R20,0xaa
+    ldi     R21,0x12
+    CALL    TRANSREPLY
+    pop     R21
+    pop     R20
+    pop     R19
 ret
 
 
@@ -193,40 +206,8 @@ GETMOTORCOUNTER: ;Send the motor counter
 ret
 
 ;################################################
-;##################CALCSPEED#####################
+;############GETSPEEDTIME########################
 ;################################################
-CALCSPEED: ;//Calculate tihe time between the two most recent motor events
-;//put it into R15:R19
-    push    R10
-    push    R11
-    push    R12
-    push    R13
-    push    R14
-    
-    lds     R10,MotorTime1
-    lds     R11,MotorTime1+1
-    lds     R12,MotorTime1+2
-    lds     R13,MotorTime1+3
-    lds     R14,MotorTime1+4
-    
-    lds     R19,MotorTime2
-    lds     R18,MotorTime2+1
-    lds     R17,MotorTime2+2
-    lds     R16,MotorTime2+3
-    lds     R15,MotorTime2+4
-    
-    sub    R15,R14
-    sbc    R16,R13
-    sbc    R17,R12
-    sbc    R18,R11
-    sbc    R19,R10
-    
-    pop     R10
-    pop     R11
-    pop     R12
-    pop     R13
-    pop     R14
-ret
     
 
 GETSPEEDTIME:

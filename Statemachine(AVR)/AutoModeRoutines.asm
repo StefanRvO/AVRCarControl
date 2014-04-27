@@ -1,5 +1,8 @@
 ;//Routines for the AutoMode functionality
 
+.equ        TURNMAG=8
+.equ        BRAKELENGHT=10
+
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
 ;##################################################
@@ -22,17 +25,23 @@ AUTOMODE:
 
     AutoModeLoop:
         lds         R19,AutoModeState
-        cpi         R19,0x10
-        brne        PC+2
-        CALL        AUTOMAP
-        cpi         R19,0x11
-        brne        PC+2
-        CALL        CALCULATE
-        cpi         R19,0x12
-        brne        PC+2
-        CALL        DRIVE
+        CPI         R19,0x10
+        BREQ        AUTOMODE1
+        lds         R19,AutoModeState
+        CPI         R19,0x11
+        BREQ        AUTOMODE2
+        
+        
     AutoModeEnd:
         jmp AutoModeLoop
+        
+    AUTOMODE1:
+    CALL        AUTOMAP
+    jmp         AutoModeLoop
+    AUTOMODE2:
+    CALL        DRIVE
+    jmp         AutoModeLoop
+        
         
         
 ;###############################################
@@ -66,8 +75,7 @@ ret
 
 CALCULATE:      ;//Does nothing
     push        R19
-    lds         R19,AutoModeState
-    inc         R19
+    ldi         R19,0x12
     sts         AutoModeState,R19
     pop R19
 ret
@@ -91,25 +99,47 @@ DRIVE:
         sts         LanePointerH,R16
         ldi         R16,LOW(CarLane)
         sts         LanePointerL,R16
+        ldi         R16,0xaa
+        out         PORTB,R16
 
 
 
 
         DRIVELOOP:
                     ;Set speed to 80
-            ldi     R16,0x80
-            out     OCR2,R16
-            lds         R20,MotorSensorCount1
+            ldi         R16,0x80
+            out         OCR2,R16
+            lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
-            lds         R22,MotorSensorCount3
+            lds         R20,MotorSensorCount3
             lds         ZH,LanePointerH
             lds         ZL,LanePointerL
 
             LD          R16,Z+ ;//ignore turntype atm
                               ;Read in MotorCounter at next turn
-            LD          R16,Z+
-            LD          R17,Z+
             LD          R18,Z+
+            LD          R17,Z+
+            LD          R16,Z+
+            ;// output over serial
+            
+            sts         TransMSG,R16
+            sts         TransMSG+1,R17
+            sts         TransMSG+2,R18
+
+
+            sts         TransMSG+3,R20
+            sts         TransMSG+4,R21
+            sts         TransMSG+5,R22
+            
+            ldi         R19,6
+            sts         TransNum,R19
+            push        R20
+            push        R21
+            ldi         R20,0xaa
+            ldi         R21,0x33
+            CALL        TRANSREPLY
+            pop         R21
+            pop         R20
                             ;Add BRAKELENGHT to current count
             ldi         R19,BRAKELENGHT
             add         R20,R19
@@ -121,7 +151,7 @@ DRIVE:
             cp      R16,R20
             cpc     R17,R21
             cpc     R18,R22
-            brne DRIVELOOP
+            brsh DRIVELOOP
             CALL    SOONTURN
         rjmp DRIVELOOP
 

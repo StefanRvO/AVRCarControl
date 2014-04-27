@@ -18,8 +18,6 @@
 .equ        MotorTime2=0x07D ; Five bytes long
 .equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 64 bytes
 .equ        CarLane =0x0c2 ; Here we put  the mapping
-.equ        TURNMAG=8
-.equ        BRAKELENGHT=20
 
 .equ        BUFFERSIZE=32
 .equ        ACCELADJUST=2
@@ -264,6 +262,9 @@ SET:
     CPI         R17,0x16 ;SETMAG
     BRNE        PC+2
     CALL        SETMAG
+    CPI         R17,0x17
+    BRNE        PC+2
+    CALL        INT1_ISR
 RET     
 ;*********
 ;****************GETMODE
