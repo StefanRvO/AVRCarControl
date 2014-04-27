@@ -1,7 +1,7 @@
 ;//Routines for the AutoMode functionality
 
 .equ        TURNMAG=8
-.equ        BRAKELENGHT=10
+.equ        BRAKELENGHT=0
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -142,16 +142,17 @@ DRIVE:
             pop         R20
                             ;Add BRAKELENGHT to current count
             ldi         R19,BRAKELENGHT
-            add         R20,R19
+            add         R22,R19
             ldi         R19,0x00
             adc         R21,R19
-            adc         R22,R19
+            adc         R20,R19
 
                             ;Check if the numbers is equal
-            cp      R16,R20
-            cpc     R17,R21
-            cpc     R18,R22
-            brsh DRIVELOOP
+            cp      R22,R18
+            cpc     R21,R17
+            cpc     R20,R16
+            brlo    DRIVELOOP
+            
             CALL    SOONTURN
         rjmp DRIVELOOP
 
