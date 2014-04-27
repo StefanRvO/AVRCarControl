@@ -1,0 +1,202 @@
+;// Routines for the various get commands
+
+;###################################################
+;##################GETSPEED#########################
+;###################################################
+
+
+GETSPEED:
+    push        R20
+    push        R21
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    in          R20,OCR2
+    ST          Z+,R20
+    ldi         R20,1
+    sts         TransNum,R20
+    ldi         R20,0xBB
+    ldi         R21,0x10
+    call        TRANSREPLY
+    pop         R21
+    pop         R22
+ret
+
+;###################################################
+;##################GETSTOP##########################
+;###################################################
+
+GETSTOP:
+ret
+;###################################################
+;##################GETAUTOMODE######################
+;###################################################
+GETAUTOMODE:
+ret
+
+
+;###################################################
+;##################GETACCEL#########################
+;###################################################
+
+
+GETACCEL:
+    push        R20
+    push        R21
+    CALL        MakeAverage 
+    sts         TransMSG,R20
+    ldi         R20,1        ;
+    sts         TransNum,R20          ;
+    ldi         R20,0xBB ;Response headers
+    ldi         R21,0x14
+    CALL        TRANSREPLY
+    pop         R21
+    pop         R20
+RET
+
+;###################################################
+;##################SWINGPING########################
+;###################################################
+
+
+SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
+    push        R22
+    push        R21
+    push        R20
+    
+    ;fetch motor counter
+    lds         R22,MotorSensorCount1
+    lds         R21,MotorSensorCount2
+    lds         R20,MotorSensorCount3
+    ;Put counter in TransMSG
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    ST          Z+,R20
+    ST          Z+,R21
+    ST          Z+,R22
+    lds         R20,TurnCount
+    ST          Z+,R20
+    lds         R20,LanePointerH
+    ST          Z+,R20
+    lds         R20,LanePointerL
+    ST          Z+,R20
+    ldi         R20,6
+    sts         TransNum,R20
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x17
+    CALL        TRANSREPLY
+    
+    pop         R20
+    pop         R21
+    pop         R22
+    ret
+
+;###################################################
+;##################GETTIME##########################
+;###################################################
+
+GETTIME: ;Send the current time
+    push        R19
+    push        R20
+    push        R21
+    push        R22
+    push        R23
+    push        R24
+    ;fetch clock
+    lds         R22,T1_Counter1     ;what if timer overflows while in interrupt?
+    lds         R23,T1_Counter2
+    lds         R24,T1_Counter3
+    in          R20,TCNT1L
+    in          R21,TCNT1H
+    in          R19,TIFR
+    SBRS        R19	,TOV1 ;Increment  if we have a overflow
+    rjmp        END_INC_GETTIME
+    cpi         R21,0xff
+    brne        INCREASE_GETTIME ;routine is partly ripped of from arduino's micros() code
+    cpi         R20,0xfe
+    brsh        INCREASE_GETTIME
+    rjmp        END_INC_GETTIME
+    INCREASE_GETTIME:
+    CLC
+    inc         R22
+    brne        END_INC_GETTIME
+    inc         R23
+    brne        END_INC_GETTIME
+    inc         R24
+    END_INC_GETTIME:  
+    ;fetch done
+
+
+    ;Put Time in TransMSG
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    ST          Z+,R24
+    ST          Z+,R23
+    ST          Z+,R22
+    ST          Z+,R21
+    ST          Z+,R20
+    ldi         R20,5
+    sts         TransNum,R20
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x16
+    CALL        TRANSREPLY
+    pop         R24
+    pop         R23
+    pop         R22
+    pop         R21
+    pop         R20
+    pop         R19
+ret
+;#########################################################
+;####################GETMOTORCOUNTER######################
+;#########################################################
+
+GETMOTORCOUNTER: ;Send the motor counter
+    push        R20
+    push        R21
+    push        R22
+    ;fetch motor counter
+    lds         R22,MotorSensorCount1
+    lds         R21,MotorSensorCount2
+    lds         R20,MotorSensorCount3
+    ;Put counter in TransMSG
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    ST          Z+,R20
+    ST          Z+,R21
+    ST          Z+,R22
+    ldi         R20,3
+    sts         TransNum,R20
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x15
+    call        TRANSREPLY
+    pop         R22
+    pop         R21
+    pop         R20
+ret
+
+;###################################################
+;##################TRANSREPLY#######################
+;###################################################
+
+TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from 0x301 and forward the number of bytes in 0x300
+    SBIS        UCSRA,UDRE
+    RJMP        TRANSREPLY
+    out         UDR,R20
+    TRANSREPLY1:
+    SBIS        UCSRA,UDRE
+    RJMP        TRANSREPLY1
+    out         UDR,R21
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    lds         R20,TransNum
+    inc         R20 ;Need to inc to get correct count
+    TRANSREPLYloop:
+    SBIS        UCSRA,UDRE
+    RJMP        TRANSREPLYloop
+    dec         R20
+    BREQ        TRANSREPLYEXIT
+    ld          R21,Z+
+    out         UDR,R21
+    rjmp        TRANSREPLYloop
+    TRANSREPLYEXIT:
+RET
