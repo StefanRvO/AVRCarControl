@@ -1,7 +1,7 @@
 ;//Routines for the AutoMode functionality
 
-.equ        TURNMAG=8
-.equ        BRAKELENGHT=0
+.equ        TURNMAG=9
+.equ        BRAKELENGHT=20
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -30,6 +30,9 @@ AUTOMODE:
         lds         R19,AutoModeState
         CPI         R19,0x11
         BREQ        AUTOMODE2
+        lds         R19,AutoModeState
+        CPI         R19,0x12
+        BREQ        AUTOMODE3
         
         
     AutoModeEnd:
@@ -40,6 +43,9 @@ AUTOMODE:
     jmp         AutoModeLoop
     AUTOMODE2:
     CALL        DRIVE
+    jmp         AutoModeLoop
+    AUTOMODE3:
+    CALL        DRIVERESET
     jmp         AutoModeLoop
         
         
@@ -80,6 +86,15 @@ CALCULATE:      ;//Does nothing
     pop R19
 ret
 
+DRIVERESET:
+        push        R16
+        ldi         R16,HIGH(CarLane)
+        sts         LanePointerH,R16
+        ldi         R16,LOW(CarLane)
+        sts         LanePointerL,R16
+        ldi         R16,0x11
+        sts         AutoModeState,R16
+        pop         R16
 
 ;#################################################
 ;####################DRIVE########################
@@ -99,15 +114,18 @@ DRIVE:
         sts         LanePointerH,R16
         ldi         R16,LOW(CarLane)
         sts         LanePointerL,R16
-        ldi         R16,0xaa
-        out         PORTB,R16
+        ;ldi         R16,0xaa
+        ;out         PORTB,R16
 
 
 
 
         DRIVELOOP:
+            lds         R16,AutoModeState
+            cpi         R16,0x11
+            brne        DRIVELOOPEND
                     ;Set speed to 80
-            ldi         R16,0x80
+            ldi         R16,0x70
             out         OCR2,R16
             lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
@@ -122,24 +140,24 @@ DRIVE:
             LD          R16,Z+
             ;// output over serial
             
-            sts         TransMSG,R16
-            sts         TransMSG+1,R17
-            sts         TransMSG+2,R18
+            ;sts         TransMSG,R16
+            ;sts         TransMSG+1,R17
+            ;sts         TransMSG+2,R18
 
 
-            sts         TransMSG+3,R20
-            sts         TransMSG+4,R21
-            sts         TransMSG+5,R22
+            ;sts         TransMSG+3,R20
+            ;sts         TransMSG+4,R21
+            ;sts         TransMSG+5,R22
             
-            ldi         R19,6
-            sts         TransNum,R19
-            push        R20
-            push        R21
-            ldi         R20,0xaa
-            ldi         R21,0x33
-            CALL        TRANSREPLY
-            pop         R21
-            pop         R20
+            ;ldi         R19,6
+            ;sts         TransNum,R19
+            ;push        R20
+            ;push        R21
+            ;ldi         R20,0xaa
+            ;ldi         R21,0x33
+            ;CALL        TRANSREPLY
+            ;pop         R21
+            ;pop         R20
                             ;Add BRAKELENGHT to current count
             ldi         R19,BRAKELENGHT
             add         R22,R19
@@ -307,9 +325,9 @@ SOONTURN: ;//Prepare for the turn in a sec
     sts         LanePointerL,ZL
 
     ;Break in 1000 ms
-    ldi R16,0xff
+    ldi R16,0x3f
     CALL BRAKETIME
-    CALL GETMOTORCOUNTER
+    ;CALL GETMOTORCOUNTER
     pop R16
 ret
 

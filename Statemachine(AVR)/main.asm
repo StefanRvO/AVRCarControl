@@ -19,7 +19,7 @@
 .equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 64 bytes
 .equ        CarLane =0x0c2 ; Here we put  the mapping
 
-.equ        BUFFERSIZE=32
+.equ        BUFFERSIZE=64
 .equ        ACCELADJUST=2
 .include    "m32Adef.inc"
 
@@ -159,23 +159,27 @@ INT1_ISR: ;//Line sensor...
     
     lds         R16,AutoModeState
     cpi         R16,0x10
-    brne        ENDAutoStateChange
+    breq        AutoStateChange
+    cpi         R16,0x11
+    breq        AutoStateChange
+    rjmp        ENDAutoStateChange
+    AutoStateChange:
     inc         R16
     sts         AutoModeState,R16
     
-    lds         R20,MotorSensorCount1
-    lds         R21,MotorSensorCount2
-    lds         R22,MotorSensorCount3
-    lds         ZH,LanePointerH
-    lds         ZL,LanePointerL
-    sts         LanePointerENDH,ZH
-    sts         LanePointerENDL,ZL
-    ldi         R16,0xff
-    ST          Z+,R16
+    ;lds         R20,MotorSensorCount1
+    ;lds         R21,MotorSensorCount2
+    ;lds         R22,MotorSensorCount3
+    ;lds         ZH,LanePointerH
+    ;lds         ZL,LanePointerL
+    ;sts         LanePointerENDH,ZH
+    ;sts         LanePointerENDL,ZL
+    ;ldi         R16,0xff
+    ;ST          Z+,R16
     
-    ST          Z+,R20
-    ST          Z+,R21
-    ST          Z+,R22
+    ;ST          Z+,R20
+    ;ST          Z+,R21
+    ;ST          Z+,R22
     
     ENDAutoStateChange:
     

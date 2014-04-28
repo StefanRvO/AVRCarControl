@@ -1,6 +1,6 @@
 ;This run on reset
 .include    "SetupStack.asm"       ;setup the stack
-.include    "SetupSerial.asm"      ;setup serial connection
+.include    "SetupSerial16Mhz.asm"      ;setup serial connection
 .include    "SetupIO.asm"
 .include    "SetupTime.asm"
 .include    "SetupADC.asm"
