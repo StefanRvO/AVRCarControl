@@ -61,20 +61,27 @@ AUTOMODE:
 ;###############################################
 
 AUTOMAP:
+    
     push        R18
     push        R20
+    AUTOMAPLOOP:
+    lds         R16,AutoModeState
+    cpi         R16,0x10
+    brne        AUTOMAPEND
     ldi         R18,0x65
     out         OCR2,R18
     CALL        MakeAverage
     cpi         R20,127+TURNMAG
     BRLO        PC+4
     CALL        LEFTSWING
-    rjmp        AUTOMAPEND
+    rjmp        AUTOMAPLOOP
     cpi         R20,127-TURNMAG+1
     BRSH        PC+4
     CALL        RIGHTSWING
-    rjmp        AUTOMAPEND
+    rjmp        AUTOMAPLOOP
+    
     CALL        STRAIGHT
+    rjmp        AUTOMAPLOOP
     
     AUTOMAPEND:
     pop         R20
@@ -114,6 +121,7 @@ DRIVE:
         push        R20
         push        R21
         push        R22
+        push        R23
         push        ZH
         push        ZL
         ldi         R16,HIGH(CarLane)
@@ -163,9 +171,9 @@ DRIVE:
             ;pop         R21
             ;pop         R20
                             ;Add BRAKELENGHT to current count
-            ldi         R19,BRAKELENGHT
-            add         R22,R19
+            ldi         R23,BRAKELENGHT
             ldi         R19,0x00
+            add         R22,R23
             adc         R21,R19
             adc         R20,R19
 
@@ -182,6 +190,7 @@ DRIVE:
     DRIVELOOPEND:
     pop         ZL
     pop         ZH
+    pop         R23
     pop         R22
     pop         R21
     pop         R20
@@ -225,6 +234,7 @@ LEFTSWINGWAIT:
         CALL            MakeAverage
         cpi             R20,127+(TURNMAG/2)
         BRLO            PC+2
+        ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
 rjmp LEFTSWINGWAIT
 
     lds         R20,MotorSensorCount1
@@ -283,6 +293,7 @@ RIGHTSWING:
         CALL        MakeAverage
         cpi         R20,127-(TURNMAG/2)+1
         BRSH        PC+2
+        ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
     rjmp        RIGHTSWINGWAIT
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
@@ -321,7 +332,8 @@ ret
 
 SOONTURN: ;//Prepare for the turn in a sec
     push R16
-
+    push ZL
+    push ZH
     ; ADD 4 to z pointer
     ADIW ZL,4
     ;Save to ram
@@ -332,6 +344,8 @@ SOONTURN: ;//Prepare for the turn in a sec
     ldi R16,0x3f
     CALL BRAKETIME
     ;CALL GETMOTORCOUNTER
+    pop ZH
+    pop ZL
     pop R16
 ret
 
