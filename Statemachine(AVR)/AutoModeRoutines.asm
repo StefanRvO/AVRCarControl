@@ -1,7 +1,13 @@
 ;//Routines for the AutoMode functionality
+;//List of turn types:
+;//RIGHT, START 01
+;//RIGHT, STOP  02
+;//LEFT,  START 03
+;//LEFT,  STOP  04
 
-.equ        TURNMAG=9
-.equ        BRAKELENGHT=20
+
+.equ        TURNMAG=7
+.equ        BRAKELENGHT=60
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -57,7 +63,7 @@ AUTOMODE:
 AUTOMAP:
     push        R18
     push        R20
-    ldi         R18,0x70
+    ldi         R18,0x65
     out         OCR2,R18
     CALL        MakeAverage
     cpi         R20,127+TURNMAG
@@ -114,8 +120,6 @@ DRIVE:
         sts         LanePointerH,R16
         ldi         R16,LOW(CarLane)
         sts         LanePointerL,R16
-        ;ldi         R16,0xaa
-        ;out         PORTB,R16
 
 
 
@@ -125,7 +129,7 @@ DRIVE:
             cpi         R16,0x11
             brne        DRIVELOOPEND
                     ;Set speed to 80
-            ldi         R16,0x70
+            ldi         R16,0x90
             out         OCR2,R16
             lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
@@ -210,7 +214,7 @@ LEFTSWING:
     lds         ZL,LanePointerL
     lds         ZH,LanePointerH
     
-    ldi         R16,0x0f
+    ldi         R16,0x03
     ST          Z+,R16
     
     ST          Z+,R20
@@ -227,7 +231,7 @@ rjmp LEFTSWINGWAIT
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
     
-    ldi         R16,0x0f
+    ldi         R16,0x04
     ST          Z+,R16
     
     ST          Z+,R20
@@ -268,7 +272,7 @@ RIGHTSWING:
     lds         ZL,LanePointerL
     lds         ZH,LanePointerH
 
-    ldi         R16,0xf0
+    ldi         R16,0x01
     ST          Z+,R16
     
     ST          Z+,R20
@@ -284,7 +288,7 @@ RIGHTSWING:
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
     
-    ldi         R16,0xf0
+    ldi         R16,0x02
     ST          Z+,R16
     
     ST          Z+,R20

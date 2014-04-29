@@ -10,8 +10,6 @@ GETSPEED:
     push        ZH
     push        R20
     push        R21
-    ldi         R20,0xff
-    out         PORTB,R20
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
     ldi         ZL,low(TransMSG)
     in          R20,OCR2

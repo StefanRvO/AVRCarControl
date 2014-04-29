@@ -16,11 +16,11 @@
 .equ        TurnCount=0x077
 .equ        MotorTime1=0x078 ;Five bytes long
 .equ        MotorTime2=0x07D ; Five bytes long
-.equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 64 bytes
-.equ        CarLane =0x0c2 ; Here we put  the mapping
+.equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 256 bytes
+.equ        CarLane =0x182 ; Here we put  the mapping
 
 .equ        BUFFERSIZE=64
-.equ        ACCELADJUST=2
+.equ        ACCELADJUST=1
 .include    "m32Adef.inc"
 
 .org        0x0000

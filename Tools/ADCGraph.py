@@ -41,7 +41,7 @@ def GetReading(LastReadings):
             return([511,511])
     try:
         reading=[]
-        while len(reading)<4:                     
+        while len(reading)<3:                     
             while (serialport.inWaiting() > 0) and len(reading)<4:
                 rawin = ord(serialport.read(1))
                 if len(reading)==0 and (not rawin==0xBB):
@@ -51,7 +51,7 @@ def GetReading(LastReadings):
                     continue
                 else:
                     reading.append(rawin)
-        reading[2]=(reading[2]<<2) | reading[3]>>6
+        reading[2]=reading[2] << 2
         
         if len(LastReadings)<moving-1 or moving==1:        
             return [reading[2],reading[2]]
