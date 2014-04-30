@@ -46,7 +46,7 @@ BRAKETIME: ;//Brakes for the number of Timer 1 overflows in R16 //Max inaccuracy
     push    R17
     cpi R16,0x00
     breq ENDBRAKETIME
-    SBI PORTB,2
+    SBI portb,1
     lds R17,T1_Counter1
     add R16,R17
     WAITLOOP_BRAKETIME:
@@ -54,7 +54,7 @@ BRAKETIME: ;//Brakes for the number of Timer 1 overflows in R16 //Max inaccuracy
         cp  R16,R17
         brne WAITLOOP_BRAKETIME
     ENDBRAKETIME:
-    CBI PORTB,2
+    CBI portb,1
     pop R17
 ret
 
@@ -67,7 +67,7 @@ BRAKEDIST: ;//Brakes for the number of Motor turns  in R16
     push    R17
     cpi R16,0x00
     breq ENDBRAKEDIST
-    SBI PORTB,2
+    SBI portb,1
     lds R17,MotorSensorCount1
     add R16,R17
     WAITLOOP_BRAKEDIST:
@@ -75,7 +75,7 @@ BRAKEDIST: ;//Brakes for the number of Motor turns  in R16
         cp  R16,R17
         brne WAITLOOP_BRAKEDIST
     ENDBRAKEDIST:
-    CBI PORTB,2
+    CBI portb,1
     pop R17
 ret
 
@@ -84,7 +84,7 @@ ret
 ;#################################################################
 
 UNBRAKE:
-    CBI PORTB,2
+    CBI portb,1
 ret
 
 ;#################################################################
@@ -92,7 +92,7 @@ ret
 ;#################################################################
 
 BRAKE:
-    SBI PORTB,2
+    SBI portb,1
 ret
 
 

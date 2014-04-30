@@ -7,7 +7,7 @@
 
 
 .equ        TURNMAG=7
-.equ        BRAKELENGHT=60
+.equ        BRAKELENGHT=140
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -26,10 +26,13 @@ AUTOMODE:
     sts         LanePointerH,R16
     ldi         R16,LOW(CarLane)
     sts         LanePointerL,R16
-    ldi         R16,0x10
+    ldi         R16,0x0f
     sts         AutoModeState,R16
 
     AutoModeLoop:
+        lds         R19,AutoModeState
+        CPI         R19,0x0f
+        BREQ        AUTOMODE0
         lds         R19,AutoModeState
         CPI         R19,0x10
         BREQ        AUTOMODE1
@@ -42,6 +45,11 @@ AUTOMODE:
         
         
     AutoModeEnd:
+        jmp AutoModeLoop
+        
+    AUTOMODE0:
+        ldi R16,0x65
+        out OCR2,R16
         jmp AutoModeLoop
         
     AUTOMODE1:
@@ -137,7 +145,7 @@ DRIVE:
             cpi         R16,0x11
             brne        DRIVELOOPEND
                     ;Set speed to 80
-            ldi         R16,0x90
+            ldi         R16,0xff
             out         OCR2,R16
             lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
@@ -322,6 +330,48 @@ ret
 ;##############################################
 
 
+CALCBREAKTIME:      ;/CALCULATE THE TIME WE WANT TO BREAK, PUT IT INTO R16
+    push    R15
+    push    R17
+    push    R18
+    push    R19
+    push    R20
+    push    R21
+    push    R22
+    push    R23
+    push    R24
+    push    R25
+    CALL    CALCSPEED
+    ldi     R20,0x00
+    ldi     R21,0xE3
+    ldi     R22,0x00
+    ldi     R23,0x00
+    ldi     R24,0x00
+    cp      R20,R15
+    cpc     R21,R16
+    cpc     R22,R17
+    cpc     R23,R18
+    cpc     R24,R19
+    brsh    PC+6
+    CALL    GETSPEEDTIME
+    ldi     R16,0x01
+    rjmp    CALCBREAKTIMEEND
+    
+    ldi     R16,0x5f
+CALCBREAKTIMEEND:
+    pop     R25
+    pop     R24
+    pop     R23
+    pop     R22
+    pop     R21
+    pop     R20
+    pop     R19
+    pop     R18
+    pop     R17
+    pop     R15
+ret
+    
+
 STRAIGHT:
 ret
 
@@ -334,16 +384,61 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R16
     push ZL
     push ZH
-    ; ADD 4 to z pointer
-    ADIW ZL,4
-    ;Save to ram
-    sts         LanePointerH,ZH
-    sts         LanePointerL,ZL
-
-    ;Break in 1000 ms
-    ldi R16,0x3f
+    push R22
+    push R21
+    push R20
+    push R17
+    push R18
+    push R19
+    push R23
+    ldi     R16,0x6f
+    CALL        CALCBREAKTIME
+    
     CALL BRAKETIME
-    ;CALL GETMOTORCOUNTER
+    
+    
+
+    TurnLoop:
+        ldi         R16,0x65
+        out         OCR2,R16
+        
+        lds         R22,MotorSensorCount1
+        lds         R21,MotorSensorCount2
+        lds         R20,MotorSensorCount3
+        push ZL
+        push ZH
+
+        LD          R16,Z+ ;//ignore turntype atm
+                              ;Read in MotorCounter at next turn
+        LD          R18,Z+
+        LD          R17,Z+
+        LD          R16,Z+
+        pop         ZH
+        pop         ZL
+        
+        ldi         R23,30
+        ldi         R19,0x00
+        SUB         R22,R23
+        SBC         R21,R19
+        SBC         R20,R19
+                           ;Check if the numbers is equal
+        cp      R22,R18
+        cpc     R21,R17
+        cpc     R20,R16
+        brlo    TurnLoop
+
+ 
+    TURNEND:
+    ADIW ZL,4
+    sts         LanePointerL,ZL
+    sts         LanePointerH,ZH
+    pop R23
+    pop R19
+    pop R18
+    pop R17
+    pop R20
+    pop R21
+    pop R22
     pop ZH
     pop ZL
     pop R16

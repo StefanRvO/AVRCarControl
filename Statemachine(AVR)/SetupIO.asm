@@ -10,7 +10,7 @@ SBI     DDRD,7
 ;Set Magnet pin as output
 SBI     DDRB,3
 ;Set brake pin as output
-SBI DDRB,2
+SBI DDRB,1
 ldi     R19,0       ;Turn motor off
 out     OCR2,R19
 out     OCR0,R19
