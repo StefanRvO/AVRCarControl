@@ -135,6 +135,14 @@ INT0_ISR:
     sts     MotorTime2+4,R20
     
     
+    ;lds         R20,AutoModeState ;;//This is experimental
+    ;cpi         R20,0x11
+    ;brne        INT0END
+    ;CALL        AutoMapAdjust
+    
+    
+    INT0END:
+    
     pop         R21
     pop         R20
     pop         R19

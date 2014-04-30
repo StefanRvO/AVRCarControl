@@ -338,7 +338,7 @@ ret
 ;##############################################
 
 
-BREAKWAIT: //Break untill the car got a specified speed
+BREAKWAIT: ;//Break untill the car got a specified speed
     push    R15
     push    R16
     push    R17
@@ -356,7 +356,7 @@ BREAKWAIT: //Break untill the car got a specified speed
     ldi     R22,0x00
     ldi     R23,0x00
     ldi     R24,0x00
-    CALL    BREAK
+    CALL    BRAKE
     BREAKWAITLOOP:
         CALL    CALCSPEED
         cp      R20,R15
@@ -366,7 +366,7 @@ BREAKWAIT: //Break untill the car got a specified speed
         cpc     R24,R19
         brsh    BREAKWAITLOOP
     
-    CALL UNBREAK
+    CALL UNBRAKE
         
 BREAKWAITEND:
     pop     R25
@@ -428,8 +428,91 @@ CALCBREAKTIMEEND:
 ret
     
 
+;AutoMapAdjust
 
+AutoMapAdjust: ;//Try to adjust the logged data while in drive mode
+    push R19
+    push R20
+    push R21
+    
+    CALL MakeAverage
+    
+    LD    R21,Z
+    cpi   R21,0x01
+    breq  AutoMapAdjust01
+    cpi   R21,0x02
+    breq  AutoMapAdjust02    
+    cpi   R21,0x03
+    breq  AutoMapAdjust03    
+    cpi   R21,0x04
+    breq  AutoMapAdjust04
+    
+    rjmp  AUTOMAPADJUSTEND
+    
+    
+    AutoMapAdjust01:
+    
 
+    cpi         R20,127-TURNMAG+1
+    BRSH        AUTOMAPADJUSTEND
+    ldi         R19,0x01
+    CALL        SAVEMOTOR
+    rjmp        AUTOMAPADJUSTEND
+    AutoMapAdjust02:
+    
+    cpi         R20,127-(TURNMAG/2)+1
+    BRSH        PC+2
+    rjmp        AUTOMAPADJUSTEND
+    ldi         R19,0x02
+    CALL        SAVEMOTOR
+    rjmp        AUTOMAPADJUSTEND
+    AutoMapAdjust03:
+    
+    cpi     R20,127+TURNMAG
+    BRLO    AUTOMAPADJUSTEND
+    ldi         R19,0x03
+    CALL        SAVEMOTOR
+    rjmp        AUTOMAPADJUSTEND
+    AutoMapAdjust04:
+    
+    cpi             R20,127+(TURNMAG/2)
+    BRLO            PC+2
+    rjmp            AUTOMAPADJUSTEND
+    ldi         R19,0x04
+    CALL        SAVEMOTOR
+    rjmp        AUTOMAPADJUSTEND
+    AUTOMAPADJUSTEND:
+    pop  R19
+    pop  R21
+    pop  R20
+ret
+
+SAVEMOTOR: ;//Saves the current motor counter and a number in R19 to ram.
+    push        ZH
+    push        ZL
+    push        R20
+    push        R21
+    push        R22
+    lds         ZH,LanePointerH
+    lds         ZL,LanePointerL
+
+        lds         R20,MotorSensorCount1
+        lds         R21,MotorSensorCount2
+        lds         R22,MotorSensorCount3
+        
+        ST          Z+,R19
+        
+        ST          Z+,R20
+        ST          Z+,R21
+        ST          Z+,R22
+        
+    pop         ZL
+    pop         ZH
+    pop         R22
+    pop         R21
+    pop         R22
+
+ret
 ;##############################################
 ;###############SOONTURN#######################
 ;##############################################
