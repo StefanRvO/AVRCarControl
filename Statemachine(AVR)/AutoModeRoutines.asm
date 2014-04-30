@@ -329,6 +329,64 @@ ret
 ;####################STRAIGHT##################
 ;##############################################
 
+STRAIGHT:
+ret
+
+
+;##############################################
+;####################BREAKWAIT#################
+;##############################################
+
+
+BREAKWAIT: //Break untill the car got a specified speed
+    push    R15
+    push    R16
+    push    R17
+    push    R18
+    push    R19
+    push    R20
+    push    R21
+    push    R22
+    push    R23
+    push    R24
+    push    R25
+    
+    ldi     R20,0x00
+    ldi     R21,0xE3
+    ldi     R22,0x00
+    ldi     R23,0x00
+    ldi     R24,0x00
+    CALL    BREAK
+    BREAKWAITLOOP:
+        CALL    CALCSPEED
+        cp      R20,R15
+        cpc     R21,R16
+        cpc     R22,R17
+        cpc     R23,R18
+        cpc     R24,R19
+        brsh    BREAKWAITLOOP
+    
+    CALL UNBREAK
+        
+BREAKWAITEND:
+    pop     R25
+    pop     R24
+    pop     R23
+    pop     R22
+    pop     R21
+    pop     R20
+    pop     R19
+    pop     R18
+    pop     R17
+    pop     R16
+    pop     R15
+ret
+
+
+
+;###################################
+;#########CALCBREAKTIME#############
+;###################################
 
 CALCBREAKTIME:      ;/CALCULATE THE TIME WE WANT TO BREAK, PUT IT INTO R16
     push    R15
@@ -340,7 +398,6 @@ CALCBREAKTIME:      ;/CALCULATE THE TIME WE WANT TO BREAK, PUT IT INTO R16
     push    R22
     push    R23
     push    R24
-    push    R25
     CALL    CALCSPEED
     ldi     R20,0x00
     ldi     R21,0xE3
@@ -359,7 +416,6 @@ CALCBREAKTIME:      ;/CALCULATE THE TIME WE WANT TO BREAK, PUT IT INTO R16
     
     ldi     R16,0x5f
 CALCBREAKTIMEEND:
-    pop     R25
     pop     R24
     pop     R23
     pop     R22
@@ -372,8 +428,7 @@ CALCBREAKTIMEEND:
 ret
     
 
-STRAIGHT:
-ret
+
 
 ;##############################################
 ;###############SOONTURN#######################
@@ -391,10 +446,10 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R18
     push R19
     push R23
-    ldi     R16,0x6f
-    CALL        CALCBREAKTIME
+
+    ;CALL        CALCBREAKTIME
     
-    CALL BRAKETIME
+    CALL        BREAKWAIT
     
     
 
