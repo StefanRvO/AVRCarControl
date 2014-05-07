@@ -191,6 +191,22 @@ def DoEvents():
                 global counter
 
                 return(counter)
+            elif event.key==K_b:
+                serialport.write([0x55])
+                serialport.write([0x14])
+                serialport.write([0x00])
+            elif event.key==K_u:
+                serialport.write([0x55])
+                serialport.write([0x15])
+                serialport.write([0x00])
+            elif event.key==K_h:
+                serialport.write([0x55])
+                serialport.write([0x10])
+                serialport.write([0x34])
+            elif event.key==K_f:
+                serialport.write([0x55])
+                serialport.write([0x10])
+                serialport.write([0x64])
                 
 def DoEventsPaused():
     global mode

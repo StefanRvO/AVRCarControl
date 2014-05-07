@@ -13,9 +13,17 @@ SETSPEED:
 	    sei		
 ;*********
 
-    nop ;convert from 0-100 to 0-255 // Not done
-    out         OCR2,R18
-    jmp         Main ; SET motor speed dependent on R18 value
+    ; SET motor speed dependent on R18 value
+    ;//Multiply R18 with 255 and divide with 100
+    ldi         R17,255
+    MUL         R18,R17
+    mov         R20,R1
+    mov         R19,R0
+    ldi         R18,100
+    CALL        divide
+    
+    out         OCR2,R19
+    jmp         GetACCELLoop 
     
     
 ;#################################################################

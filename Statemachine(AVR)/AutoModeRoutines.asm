@@ -7,7 +7,8 @@
 
 
 .equ        TURNMAG=7
-.equ        BRAKELENGHT=140
+.equ        BRAKELENGHT=105
+.equ        TURNENDPREV=140
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -48,7 +49,7 @@ AUTOMODE:
         jmp AutoModeLoop
         
     AUTOMODE0:
-        ldi R16,0x65
+        ldi R16,0x70
         out OCR2,R16
         jmp AutoModeLoop
         
@@ -76,7 +77,7 @@ AUTOMAP:
     lds         R16,AutoModeState
     cpi         R16,0x10
     brne        AUTOMAPEND
-    ldi         R18,0x65
+    ldi         R18,0x70
     out         OCR2,R18
     CALL        MakeAverage
     cpi         R20,127+TURNMAG
@@ -147,6 +148,8 @@ DRIVE:
                     ;Set speed to 80
             ldi         R16,0xff
             out         OCR2,R16
+            ldi         R16,0x00
+            out         OCR0,R16
             lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
             lds         R20,MotorSensorCount3
@@ -244,7 +247,7 @@ LEFTSWINGWAIT:
         BRLO            PC+2
         ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
 rjmp LEFTSWINGWAIT
-
+    
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
@@ -255,7 +258,7 @@ rjmp LEFTSWINGWAIT
     ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    
+    CALL        SWINGPING
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
@@ -303,6 +306,7 @@ RIGHTSWING:
         BRSH        PC+2
         ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
     rjmp        RIGHTSWINGWAIT
+    CALL        SWINGPING
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
@@ -352,12 +356,13 @@ BREAKWAIT: ;//Break untill the car got a specified speed
     push    R25
     
     ldi     R20,0x00
-    ldi     R21,0xE3
+    ldi     R21,0xCA
     ldi     R22,0x00
     ldi     R23,0x00
     ldi     R24,0x00
     CALL    BRAKE
     BREAKWAITLOOP:
+        CALL    GETSPEEDTIME
         CALL    CALCSPEED
         cp      R20,R15
         cpc     R21,R16
@@ -529,7 +534,8 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R18
     push R19
     push R23
-
+    ldi  R23,0xff
+    out  OCR0,R23
     ;CALL        CALCBREAKTIME
     
     CALL        BREAKWAIT
@@ -537,7 +543,7 @@ SOONTURN: ;//Prepare for the turn in a sec
     
 
     TurnLoop:
-        ldi         R16,0x65
+        ldi         R16,0xb7
         out         OCR2,R16
         
         lds         R22,MotorSensorCount1
@@ -554,7 +560,7 @@ SOONTURN: ;//Prepare for the turn in a sec
         pop         ZH
         pop         ZL
         
-        ldi         R23,30
+        ldi         R23,TURNENDPREV
         ldi         R19,0x00
         SUB         R22,R23
         SBC         R21,R19
@@ -564,6 +570,7 @@ SOONTURN: ;//Prepare for the turn in a sec
         cpc     R21,R17
         cpc     R20,R16
         brlo    TurnLoop
+        
 
  
     TURNEND:

@@ -19,7 +19,7 @@
 .equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 256 bytes
 .equ        CarLane =0x182 ; Here we put  the mapping
 
-.equ        BUFFERSIZE=64
+.equ        BUFFERSIZE=32
 .equ        ACCELADJUST=1
 .include    "m32Adef.inc"
 
@@ -35,6 +35,7 @@ Reset:
 .include "ADCRoutines.asm"
 .include "AutoModeRoutines.asm"
 .include "GetRoutines.asm"
+.include "divide.asm"
 
 
 ;****
@@ -162,9 +163,8 @@ INT1_ISR: ;//Line sensor...
     push        R22
     push        ZL
     push        ZH
-    CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
+    ;CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
     ;CALL	    GETTIME
-    
     lds         R16,AutoModeState
     cpi         R16,0x0f
     breq        AutoStateChange
@@ -342,6 +342,9 @@ Main:
 MainLoop:
 ldi R16,0x00
 sts AutoModeState,R16
+;inc R18
+;out OCR0,R18
+;CALL DELAY
 RJMP        MainLoop
 
 
@@ -362,7 +365,7 @@ DELAY:
     push R17
     push R18
     ldi R17,0xff
-    ldi R18,0x0f
+    ldi R18,0x50
     DELAYLOOP:
     dec R17
     breq R18DEC

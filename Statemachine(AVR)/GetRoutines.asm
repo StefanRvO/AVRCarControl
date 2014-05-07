@@ -73,7 +73,58 @@ RET
 ;###################################################
 ;##################SWINGPING########################
 ;###################################################
-
+SWINGPING2: ;//Send the motorcounter, Turncount, ZL, ZH
+    push        R16
+    push        R17   
+    push        R18
+    push        R19
+    push        R20
+    push        R21
+    push        R22
+    push        R23
+    push        ZL
+    push        ZH
+    lds         ZL,LanePointerL
+    lds         ZH,LanePointerH
+    SBIW        ZL,8
+    
+                ;get counters in turn
+    LD          R16,Z+
+    LD          R17,Z+
+    LD          R18,Z+
+    LD          R19,Z+
+    
+    LD          R20,Z+
+    LD          R21,Z+
+    LD          R22,Z+
+    LD          R23,Z+
+    
+    SUB      R17,R21
+    SBC     R18,R22
+    SBC     R19,R23 
+    
+    
+    ;Put counter in TransMSG
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    ST          Z+,R19
+    ST          Z+,R18
+    ST          Z+,R17
+    ldi         R20,3
+    ldi         R20,0x00 ;Respond header
+    ldi         R21,0x00
+    CALL        TRANSREPLY
+    pop         ZH
+    pop         ZL
+    pop         R23
+    pop         R22
+    pop         R21
+    pop         R20
+    pop         R19
+    pop         R18
+    pop         R17
+    pop         R16
+    ret
 
 SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     push        R22
@@ -92,16 +143,16 @@ SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    lds         R20,TurnCount
-    ST          Z+,R20
-    lds         R20,LanePointerH
-    ST          Z+,R20
-    lds         R20,LanePointerL
-    ST          Z+,R20
-    ldi         R20,6
+    ;lds         R20,TurnCount
+    ;ST          Z+,R20
+    ;lds         R20,LanePointerH
+    ;ST          Z+,R20
+    ;lds         R20,LanePointerL
+    ;ST          Z+,R20
+    ldi         R20,3
     sts         TransNum,R20
-    ldi         R20,0xBB ;Respond header
-    ldi         R21,0x17
+    ldi         R20,0x00 ;Respond header
+    ldi         R21,0x00
     CALL        TRANSREPLY
     pop         ZH
     pop         ZL

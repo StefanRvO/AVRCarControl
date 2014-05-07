@@ -88,8 +88,8 @@ MakeAverage: ;//Read in from the Readings circle buffer, calculate the average. 
     ROR         R20 //We have divided by 16
     LSR         R21
     ROR         R20
-    LSR         R21
-    ROR         R20
+  ;  LSR         R21
+ ;  ROR         R20
     
     pop         ZL
     pop         ZH
