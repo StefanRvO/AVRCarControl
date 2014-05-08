@@ -202,7 +202,7 @@ def DoEvents():
             elif event.key==K_h:
                 serialport.write([0x55])
                 serialport.write([0x10])
-                serialport.write([0x34])
+                serialport.write([0x32])
             elif event.key==K_f:
                 serialport.write([0x55])
                 serialport.write([0x10])

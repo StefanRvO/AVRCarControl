@@ -23,7 +23,7 @@ SETSPEED:
     CALL        divide
     
     out         OCR2,R19
-    jmp         GetACCELLoop 
+    jmp         Main 
     
     
 ;#################################################################

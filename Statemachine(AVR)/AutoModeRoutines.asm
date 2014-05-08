@@ -7,8 +7,17 @@
 
 
 .equ        TURNMAG=7
+.equ        TURNMAGOUT=TURNMAG-2
 .equ        BRAKELENGHT=105
 .equ        TURNENDPREV=140
+.equ        MAPPINGSPEED=0x8f
+.equ        TURNSPEED=0x90
+.equ        INNER45_90=75
+.equ        INNER90_135=103
+.equ        INNER135_180=137
+.equ        OUTER45_90=80
+.equ        OUTER90_135=129
+.equ        OUTER135_180=159
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -49,7 +58,7 @@ AUTOMODE:
         jmp AutoModeLoop
         
     AUTOMODE0:
-        ldi R16,0x70
+        ldi R16,MAPPINGSPEED
         out OCR2,R16
         jmp AutoModeLoop
         
@@ -64,7 +73,49 @@ AUTOMODE:
     jmp         AutoModeLoop
         
         
+ADJUSTAUTOMAPSPEED:       
+ 
+ 
+    push    R15
+    push    R16
+    push    R17
+    push    R18
+    push    R19
+    push    R20
+    push    R21
+    push    R22
+    push    R23
+    push    R24
+    
+    ldi     R20,0x08
+    ldi     R21,0xCF
+    ldi     R22,0x00
+    ldi     R23,0x00
+    ldi     R24,0x00
+    CALL    BRAKE
+    ADJUSTAUTOMAPSPEEDLOOP:
+        CALL    CALCSPEED
+        cp      R20,R15
+        cpc     R21,R16
+        cpc     R22,R17
+        cpc     R23,R18
+        cpc     R24,R19
+        brsh    ADJUSTAUTOMAPSPEEDLOOP
+    
+    CALL UNBRAKE
         
+ADJUSTAUTOMAPSPEEDEND:
+    pop     R24
+    pop     R23
+    pop     R22
+    pop     R21
+    pop     R20
+    pop     R19
+    pop     R18
+    pop     R17
+    pop     R16
+    pop     R15
+ret
 ;###############################################
 ;###################AUTOMAP#####################
 ;###############################################
@@ -74,10 +125,11 @@ AUTOMAP:
     push        R18
     push        R20
     AUTOMAPLOOP:
+    CALL        ADJUSTAUTOMAPSPEED
     lds         R16,AutoModeState
     cpi         R16,0x10
     brne        AUTOMAPEND
-    ldi         R18,0x70
+    ldi         R18,MAPPINGSPEED
     out         OCR2,R18
     CALL        MakeAverage
     cpi         R20,127+TURNMAG
@@ -228,6 +280,7 @@ LEFTSWING:
     inc         R20
     sts         TurnCount,R20
     CALL        SWINGPING
+    CALL        GETSPEEDTIME
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
@@ -243,10 +296,23 @@ LEFTSWING:
     
 LEFTSWINGWAIT:
         CALL            MakeAverage
-        cpi             R20,127+(TURNMAG/2)
+        cpi             R20,127+(TURNMAGOUT)
         BRLO            PC+2
         ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
 rjmp LEFTSWINGWAIT
+        CALL            DELAY
+        CALL            MakeAverage
+        cpi             R20,127+(TURNMAGOUT)
+        BRLO            PC+2
+        ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
+rjmp LEFTSWINGWAIT
+        CALL            DELAY
+        CALL            MakeAverage
+        cpi             R20,127+(TURNMAGOUT)
+        BRLO            PC+2
+        ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
+rjmp LEFTSWINGWAIT
+
     
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
@@ -287,6 +353,7 @@ RIGHTSWING:
     inc         R20
     sts         TurnCount,R20
     CALL        SWINGPING
+    CALL        GETSPEEDTIME
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R22,MotorSensorCount3
@@ -302,10 +369,26 @@ RIGHTSWING:
     
     RIGHTSWINGWAIT:
         CALL        MakeAverage
-        cpi         R20,127-(TURNMAG/2)+1
+        cpi         R20,127-(TURNMAGOUT)+1
         BRSH        PC+2
         ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
+        
     rjmp        RIGHTSWINGWAIT
+        CALL        DELAY
+        CALL        MakeAverage
+        cpi         R20,127-(TURNMAGOUT)+1
+        BRSH        PC+2
+        ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
+        
+    rjmp        RIGHTSWINGWAIT
+        CALL        DELAY
+        CALL        MakeAverage
+        cpi         R20,127-(TURNMAGOUT)+1
+        BRSH        PC+2
+        ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
+        
+    rjmp        RIGHTSWINGWAIT
+    
     CALL        SWINGPING
     lds         R20,MotorSensorCount1
     lds         R21,MotorSensorCount2
@@ -465,7 +548,7 @@ AutoMapAdjust: ;//Try to adjust the logged data while in drive mode
     rjmp        AUTOMAPADJUSTEND
     AutoMapAdjust02:
     
-    cpi         R20,127-(TURNMAG/2)+1
+    cpi         R20,127-(TURNMAGOUT)+1
     BRSH        PC+2
     rjmp        AUTOMAPADJUSTEND
     ldi         R19,0x02
@@ -480,7 +563,7 @@ AutoMapAdjust: ;//Try to adjust the logged data while in drive mode
     rjmp        AUTOMAPADJUSTEND
     AutoMapAdjust04:
     
-    cpi             R20,127+(TURNMAG/2)
+    cpi             R20,127+(TURNMAGOUT)
     BRLO            PC+2
     rjmp            AUTOMAPADJUSTEND
     ldi         R19,0x04
@@ -543,7 +626,7 @@ SOONTURN: ;//Prepare for the turn in a sec
     
 
     TurnLoop:
-        ldi         R16,0xb7
+        ldi         R16,TURNSPEED
         out         OCR2,R16
         
         lds         R22,MotorSensorCount1

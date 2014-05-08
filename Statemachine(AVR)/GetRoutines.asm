@@ -276,12 +276,12 @@ GETSPEEDTIME:
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
     ldi         ZL,low(TransMSG)
     
-    ST          Z+,R19
-    ST          Z+,R18
+;    ST          Z+,R19
+;    ST          Z+,R18
     ST          Z+,R17
     ST          Z+,R16
     ST          Z+,R15
-    ldi         R20,5
+    ldi         R20,3
     sts         TransNum,R20
     ldi         R20,0xBB ;Respond header
     ldi         R21,0x16

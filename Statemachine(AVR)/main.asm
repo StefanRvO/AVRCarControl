@@ -163,13 +163,13 @@ INT1_ISR: ;//Line sensor...
     push        R22
     push        ZL
     push        ZH
-    ;CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
+    CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
     ;CALL	    GETTIME
     lds         R16,AutoModeState
     cpi         R16,0x0f
     breq        AutoStateChange
-    cpi         R16,0x10
-    breq        AutoStateChange
+    ;cpi         R16,0x10
+    ;breq        AutoStateChange
     cpi         R16,0x11
     breq        AutoStateChange
     rjmp        ENDAutoStateChange
@@ -365,7 +365,7 @@ DELAY:
     push R17
     push R18
     ldi R17,0xff
-    ldi R18,0x50
+    ldi R18,0xff
     DELAYLOOP:
     dec R17
     breq R18DEC
