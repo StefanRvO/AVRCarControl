@@ -1,9 +1,15 @@
 ;//Routines for the AutoMode functionality
 ;//List of turn types:
-;//RIGHT, START 01
-;//RIGHT, STOP  02
-;//LEFT,  START 03
-;//LEFT,  STOP  04
+;//RIGHT45, START 01
+;//RIGHT90, START 02
+;//RIGHT135, START 03
+;//RIGHT180, START 04
+;//RIGHT, STOP  0A
+;//LEFT45,  START 05
+;//LEFT90,  START 06
+;//LEFT135,  START 07
+;//LEFT180,  START 08
+;//LEFT,  STOP  0B
 
 
 .equ        TURNMAG=7
@@ -12,12 +18,12 @@
 .equ        TURNENDPREV=140
 .equ        MAPPINGSPEED=0x8f
 .equ        TURNSPEED=0x90
-.equ        INNER45_90=75
-.equ        INNER90_135=103
-.equ        INNER135_180=137
-.equ        OUTER45_90=80
-.equ        OUTER90_135=129
-.equ        OUTER135_180=159
+.equ        LEFT45_90=75
+.equ        LEFT90_135=103
+.equ        LEFT135_180=137
+.equ        RIGHT45_90=80
+.equ        RIGHT90_135=129
+.equ        RIGHT135_180=159
 
 ;##################################################
 ;###############AUTOMODE MAINLOOP##################
@@ -271,9 +277,16 @@ ret
   
 LEFTSWING:
     push        R16
+    push        R17
+    push        R18
+    push        R19
     push        R20
     push        R21
     push        R22
+    push        R23
+    push        R24
+    push        R25
+    push        R26
     push        ZL
     push        ZH
     lds         R20,TurnCount
@@ -281,18 +294,9 @@ LEFTSWING:
     sts         TurnCount,R20
     CALL        SWINGPING
     CALL        GETSPEEDTIME
-    lds         R20,MotorSensorCount1
-    lds         R21,MotorSensorCount2
-    lds         R22,MotorSensorCount3
-    lds         ZL,LanePointerL
-    lds         ZH,LanePointerH
-    
-    ldi         R16,0x03
-    ST          Z+,R16
-    
-    ST          Z+,R20
-    ST          Z+,R21
-    ST          Z+,R22
+    lds         R21,MotorSensorCount1
+    lds         R22,MotorSensorCount2
+    lds         R23,MotorSensorCount3
     
 LEFTSWINGWAIT:
         CALL            MakeAverage
@@ -313,27 +317,65 @@ rjmp LEFTSWINGWAIT
         ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
 rjmp LEFTSWINGWAIT
 
-    
-    lds         R20,MotorSensorCount1
-    lds         R21,MotorSensorCount2
-    lds         R22,MotorSensorCount3
-    
-    ldi         R16,0x04
-    ST          Z+,R16
-    
-    ST          Z+,R20
+    CALL        SWINGPING
+
+    lds         R24,MotorSensorCount1
+    lds         R25,MotorSensorCount2
+    lds         R26,MotorSensorCount3
+
+    clc
+    mov         R17,R24
+    mov         R18,R25
+    mov         R19,R26
+    sub         R17,R21
+    sbc         R18,R22
+    sub         R19,R23
+
+    ldi         R16,0x08
+    cpi         R19,0
+    brne        LEFTSWINGSEND
+    ldi         R16,0x08
+    cpi         R18,0
+    brne        LEFTSWINGSEND
+    ldi         R16,0x08
+    cpi         R17,LEFT135_180
+    brge        LEFTSWINGSEND
+    ldi         R16,0x07
+    cpi         R17,LEFT90_135
+    brge        LEFTSWINGEND
+    ldi         R16,0x06
+    cpi         R17,LEFT45_90
+    brge        LEFTSWINGEND
+    ldi         R16,0x05
+
+LEFTSWINGSEND:
+    lds         ZL,LanePointerL
+    lds         ZH,LanePointerH
+    st          Z+,R16
     ST          Z+,R21
     ST          Z+,R22
-    CALL        SWINGPING
+    ST          Z+,R23
+    ldi         R16,0x0B
+    ST          Z+,R16
+    ST          Z+,R24
+    ST          Z+,R25
+    ST          Z+,R26
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
 
     pop         ZH
     pop         ZL
+    pop         R26
+    pop         R25
+    pop         R24
+    pop         R23
     pop         R22
     pop         R21
     pop         R20
+    pop         R19
+    pop         R18
+    pop         R17
     pop         R16
 ret
 
@@ -344,9 +386,16 @@ ret
 
 RIGHTSWING:
     push        R16
+    push        R17
+    push        R18
+    push        R19
     push        R20
     push        R21
     push        R22
+    push        R23
+    push        R24
+    push        R25
+    push        R26
     push        ZL
     push        ZH
     lds         R20,TurnCount
@@ -354,18 +403,9 @@ RIGHTSWING:
     sts         TurnCount,R20
     CALL        SWINGPING
     CALL        GETSPEEDTIME
-    lds         R20,MotorSensorCount1
-    lds         R21,MotorSensorCount2
-    lds         R22,MotorSensorCount3
-    lds         ZL,LanePointerL
-    lds         ZH,LanePointerH
-
-    ldi         R16,0x01
-    ST          Z+,R16
-    
-    ST          Z+,R20
-    ST          Z+,R21
-    ST          Z+,R22
+    lds         R21,MotorSensorCount1
+    lds         R22,MotorSensorCount2
+    lds         R23,MotorSensorCount3
     
     RIGHTSWINGWAIT:
         CALL        MakeAverage
@@ -390,25 +430,64 @@ RIGHTSWING:
     rjmp        RIGHTSWINGWAIT
     
     CALL        SWINGPING
-    lds         R20,MotorSensorCount1
-    lds         R21,MotorSensorCount2
-    lds         R22,MotorSensorCount3
-    
+
+    lds         R24,MotorSensorCount1
+    lds         R25,MotorSensorCount2
+    lds         R26,MotorSensorCount3
+
+    clc
+    mov         R17,R24
+    mov         R18,R25
+    mov         R19,R26
+    sub         R17,R21
+    sbc         R18,R22
+    sub         R19,R23
+
+    ldi         R16,0x04
+    cpi         R19,0
+    brne        RIGHTSWINGSEND
+    ldi         R16,0x04
+    cpi         R18,0
+    brne        RIGHTSWINGSEND
+    ldi         R16,0x04
+    cpi         R17,RIGHT135_180
+    brge        RIGHTSWINGSEND
+    ldi         R16,0x03
+    cpi         R17,RIGHT90_135
+    brge        RIGHTSWINGSEND
     ldi         R16,0x02
+    cpi         R17,RIGHT45_90
+    brge        RIGHTSWINGSEND
+    ldi         R16,0x01
+
+RIGHTSWINGSEND:
+    lds         ZL,LanePointerL
+    lds         ZH,LanePointerH
     ST          Z+,R16
-    
-    ST          Z+,R20
     ST          Z+,R21
     ST          Z+,R22
-    
+    ST          Z+,R23
+    ldi         R16,0x0B
+    ST          Z+,R16
+    ST          Z+,R24
+    ST          Z+,R25
+    ST          Z+,R26
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
+
     pop         ZH
     pop         ZL
+    pop         R26
+    pop         R25
+    pop         R24
+    pop         R23
     pop         R22
     pop         R21
     pop         R20
+    pop         R19
+    pop         R18
+    pop         R17
     pop         R16
 ret
 
