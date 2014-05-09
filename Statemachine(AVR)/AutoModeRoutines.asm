@@ -342,10 +342,10 @@ rjmp LEFTSWINGWAIT
     brge        LEFTSWINGSEND
     ldi         R16,0x07
     cpi         R17,LEFT90_135
-    brge        LEFTSWINGEND
+    brge        LEFTSWINGSEND
     ldi         R16,0x06
     cpi         R17,LEFT45_90
-    brge        LEFTSWINGEND
+    brge        LEFTSWINGSEND
     ldi         R16,0x05
 
 LEFTSWINGSEND:
