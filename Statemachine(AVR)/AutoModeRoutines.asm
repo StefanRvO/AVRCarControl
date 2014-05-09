@@ -1,17 +1,17 @@
 ;//Routines for the AutoMode functionality
-;//List of turn types:
-;//RIGHT45, START 01
-;//RIGHT90, START 02
-;//RIGHT135, START 03
-;//RIGHT180, START 04
-;//RIGHT, STOP  0A
-;//LEFT45,  START 05
-;//LEFT90,  START 06
-;//LEFT135,  START 07
-;//LEFT180,  START 08
-;//LEFT,  STOP  0B
 
 
+
+.equ        RIGHT45=0x01
+.equ        RIGHT90=0x02
+.equ        RIGHT135=0x03
+.equ        RIGHT180=0x04
+.equ        RIGHTEND=0x0A
+.equ        LEFT45=0x05
+.equ        LEFT90=0x06
+.equ        LEFT135=0x07
+.equ        LEFT180=0x08
+.equ        LEFTEND=0x0b
 .equ        TURNMAG=7
 .equ        TURNMAGOUT=TURNMAG-2
 .equ        BRAKELENGHT=105
@@ -292,8 +292,6 @@ LEFTSWING:
     lds         R20,TurnCount
     inc         R20
     sts         TurnCount,R20
-    CALL        SWINGPING
-    CALL        GETSPEEDTIME
     lds         R21,MotorSensorCount1
     lds         R22,MotorSensorCount2
     lds         R23,MotorSensorCount3
@@ -317,7 +315,6 @@ rjmp LEFTSWINGWAIT
         ;//MAYBE DELAY A BIT HERE AND TEST AGAIN...??
 rjmp LEFTSWINGWAIT
 
-    CALL        SWINGPING
 
     lds         R24,MotorSensorCount1
     lds         R25,MotorSensorCount2
@@ -329,24 +326,24 @@ rjmp LEFTSWINGWAIT
     mov         R19,R26
     sub         R17,R21
     sbc         R18,R22
-    sub         R19,R23
+    sbc         R19,R23
 
-    ldi         R16,0x08
+    ldi         R16,LEFT180
     cpi         R19,0
     brne        LEFTSWINGSEND
-    ldi         R16,0x08
+    ldi         R16,LEFT180
     cpi         R18,0
     brne        LEFTSWINGSEND
-    ldi         R16,0x08
+    ldi         R16,LEFT180
     cpi         R17,LEFT135_180
-    brge        LEFTSWINGSEND
-    ldi         R16,0x07
+    brsh        LEFTSWINGSEND
+    ldi         R16,LEFT135
     cpi         R17,LEFT90_135
-    brge        LEFTSWINGSEND
-    ldi         R16,0x06
+    brsh        LEFTSWINGSEND
+    ldi         R16,LEFT90
     cpi         R17,LEFT45_90
-    brge        LEFTSWINGSEND
-    ldi         R16,0x05
+    brsh        LEFTSWINGSEND
+    ldi         R16,LEFT45
 
 LEFTSWINGSEND:
     lds         ZL,LanePointerL
@@ -355,7 +352,6 @@ LEFTSWINGSEND:
     ST          Z+,R21
     ST          Z+,R22
     ST          Z+,R23
-    ldi         R16,0x0B
     ST          Z+,R16
     ST          Z+,R24
     ST          Z+,R25
@@ -363,6 +359,7 @@ LEFTSWINGSEND:
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
+    CALL        SWINGPING
 
     pop         ZH
     pop         ZL
@@ -401,8 +398,6 @@ RIGHTSWING:
     lds         R20,TurnCount
     inc         R20
     sts         TurnCount,R20
-    CALL        SWINGPING
-    CALL        GETSPEEDTIME
     lds         R21,MotorSensorCount1
     lds         R22,MotorSensorCount2
     lds         R23,MotorSensorCount3
@@ -429,7 +424,6 @@ RIGHTSWING:
         
     rjmp        RIGHTSWINGWAIT
     
-    CALL        SWINGPING
 
     lds         R24,MotorSensorCount1
     lds         R25,MotorSensorCount2
@@ -441,24 +435,24 @@ RIGHTSWING:
     mov         R19,R26
     sub         R17,R21
     sbc         R18,R22
-    sub         R19,R23
+    sbc         R19,R23
 
-    ldi         R16,0x04
+    ldi         R16,RIGHT180
     cpi         R19,0
     brne        RIGHTSWINGSEND
-    ldi         R16,0x04
+    ldi         R16,RIGHT180
     cpi         R18,0
     brne        RIGHTSWINGSEND
-    ldi         R16,0x04
+    ldi         R16,RIGHT180
     cpi         R17,RIGHT135_180
-    brge        RIGHTSWINGSEND
-    ldi         R16,0x03
+    brsh        RIGHTSWINGSEND
+    ldi         R16,RIGHT135
     cpi         R17,RIGHT90_135
-    brge        RIGHTSWINGSEND
-    ldi         R16,0x02
+    brsh        RIGHTSWINGSEND
+    ldi         R16,RIGHT90
     cpi         R17,RIGHT45_90
-    brge        RIGHTSWINGSEND
-    ldi         R16,0x01
+    brsh        RIGHTSWINGSEND
+    ldi         R16,RIGHT45
 
 RIGHTSWINGSEND:
     lds         ZL,LanePointerL
@@ -467,7 +461,6 @@ RIGHTSWINGSEND:
     ST          Z+,R21
     ST          Z+,R22
     ST          Z+,R23
-    ldi         R16,0x0B
     ST          Z+,R16
     ST          Z+,R24
     ST          Z+,R25
@@ -475,6 +468,7 @@ RIGHTSWINGSEND:
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
+    CALL        SWINGPING
 
     pop         ZH
     pop         ZL

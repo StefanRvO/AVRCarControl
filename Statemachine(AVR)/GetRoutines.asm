@@ -130,32 +130,57 @@ SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     push        R22
     push        R21
     push        R20
+    push        R19
+    push        R18
+    push        R17
+    push        R16
+    push        R15
     push        ZL
     push        ZH
-    
     ;fetch motor counter
-    lds         R22,MotorSensorCount1
-    lds         R21,MotorSensorCount2
-    lds         R20,MotorSensorCount3
+    lds         ZL,LanePointerL
+    lds         ZH,LanePointerH
+    SBIW        ZL,8
+    ld          R22,Z+
+    LD          R21,Z+
+    LD          R20,Z+
+    LD          R19,Z+
+    
+    LD          R18,Z+
+    LD          R17,Z+
+    LD          R16,Z+
+    LD          R15,Z+
     ;Put counter in TransMSG
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
     ldi         ZL,low(TransMSG)
+    ST          Z+,R22
+    ST          Z+,R19
     ST          Z+,R20
     ST          Z+,R21
-    ST          Z+,R22
-    ;lds         R20,TurnCount
-    ;ST          Z+,R20
-    ;lds         R20,LanePointerH
-    ;ST          Z+,R20
-    ;lds         R20,LanePointerL
-    ;ST          Z+,R20
-    ldi         R20,3
+    ldi         R20,4
     sts         TransNum,R20
-    ldi         R20,0x00 ;Respond header
-    ldi         R21,0x00
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x17
+    CALL        TRANSREPLY
+    
+    ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
+    ldi         ZL,low(TransMSG)
+    ST          Z+,R18
+    ST          Z+,R15
+    ST          Z+,R16
+    ST          Z+,R17
+    ldi         R20,4
+    sts         TransNum,R20
+    ldi         R20,0xBB ;Respond header
+    ldi         R21,0x17
     CALL        TRANSREPLY
     pop         ZH
     pop         ZL
+    pop         R15
+    pop         R16
+    pop         R17
+    pop         R18
+    pop         R19
     pop         R20
     pop         R21
     pop         R22
