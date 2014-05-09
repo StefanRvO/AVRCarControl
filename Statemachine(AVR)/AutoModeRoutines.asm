@@ -21,36 +21,36 @@
 .equ        OUTER90_135=129
 .equ        OUTER135_180=159
 
-.equ        INNER45_BREAKSPEED=0xDD
-.equ        INNER90_BREAKSPEED=0xDD
-.equ        INNER135_BREAKSPEED=0xDD
-.equ        INNER180_BREAKSPEED=0xDD
+.equ        INNER45_BRAKESPEED=0xff
+.equ        INNER90_BRAKESPEED=0xff
+.equ        INNER135_BRAKESPEED=0xFF
+.equ        INNER180_BRAKESPEED=0xFF
 
-.equ        OUTER45_BREAKSPEED=0xDD
-.equ        OUTER90_BREAKSPEED=0xDD
-.equ        OUTER135_BREAKSPEED=0xDD
-.equ        OUTER180_BREAKSPEED=0xDD
+.equ        OUTER45_BRAKESPEED=0xff
+.equ        OUTER90_BRAKESPEED=0xFF
+.equ        OUTER135_BRAKESPEED=0xFF
+.equ        OUTER180_BRAKESPEED=0xFF
 
-.equ        BRAKELENGHT_INNER45=160
-.equ        BRAKELENGHT_INNER90=160
-.equ        BRAKELENGHT_INNER135=160
-.equ        BRAKELENGHT_INNER180=160
+.equ        BRAKELENGHT_INNER45=140
+.equ        BRAKELENGHT_INNER90=150
+.equ        BRAKELENGHT_INNER135=140
+.equ        BRAKELENGHT_INNER180=140
 
-.equ        BRAKELENGHT_OUTER45=160
-.equ        BRAKELENGHT_OUTER90=160
-.equ        BRAKELENGHT_OUTER135=160
-.equ        BRAKELENGHT_OUTER180=160
+.equ        BRAKELENGHT_OUTER45=140
+.equ        BRAKELENGHT_OUTER90=140
+.equ        BRAKELENGHT_OUTER135=140
+.equ        BRAKELENGHT_OUTER180=140
 
 
-.equ        TURNSPEED_INNER45=0xa0
-.equ        TURNSPEED_INNER90=0xa0
-.equ        TURNSPEED_INNER135=0xa0
-.equ        TURNSPEED_INNER180=0xa0
+.equ        TURNSPEED_INNER45=0x6f
+.equ        TURNSPEED_INNER90=0x9f
+.equ        TURNSPEED_INNER135=0x6f
+.equ        TURNSPEED_INNER180=0x6f
 
-.equ        TURNSPEED_OUTER45=0xa0
-.equ        TURNSPEED_OUTER90=0xa0
-.equ        TURNSPEED_OUTER135=0xa0
-.equ        TURNSPEED_OUTER180=0xa0
+.equ        TURNSPEED_OUTER45=0x6f
+.equ        TURNSPEED_OUTER90=0x6f
+.equ        TURNSPEED_OUTER135=0x6f
+.equ        TURNSPEED_OUTER180=0x6f
 
 
 .equ        TURNOUT_INNER45=20
@@ -67,7 +67,7 @@
 .equ        TURNMAGOUT=TURNMAG-2
 
 .equ        BRAKELENGHT=160
-.equ        TURNENDPREV=20
+.equ        TURNENDPREV=0
 
 .equ        MAPPINGSPEED=0x8f
 
@@ -314,6 +314,7 @@ DRIVE:
             cpc     R20,R16
             brlo    DRIVELOOP
             
+            CALL    BRAKE
             CALL    SOONTURN
         rjmp DRIVELOOP
 
@@ -557,122 +558,6 @@ STRAIGHT:
 ret
 
 
-;##############################################
-;####################BREAKWAIT#################
-;##############################################
-
-
-BREAKWAIT: ;//Break untill the car got a specified speed ; the turntype is defined in R16
-
-    push    R15
-    push    R16
-    push    R17
-    push    R18
-    push    R19
-    push    R20
-    push    R21
-    push    R22
-    push    R23
-    push    R24
-    push    R25
-    CALL    BRAKE
-    
-    cpi     R16,INNER45
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,INNER45_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    rjmp    BREAKWAITLOOP
-    cpi     R16,INNER90
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,INNER90_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    rjmp    BREAKWAITLOOP
-    
-    cpi     R16,INNER135
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,INNER135_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    rjmp    BREAKWAITLOOP
-    
-    cpi     R16,INNER180
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,INNER180_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    
-    cpi     R16,OUTER45
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,OUTER45_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    
-    cpi     R16,OUTER90
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,OUTER90_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    rjmp    BREAKWAITLOOP
-    
-    cpi     R16,OUTER135
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,OUTER135_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    rjmp    BREAKWAITLOOP
-    
-    cpi     R16,OUTER180
-    brne    PC+12
-    ldi     R20,0x00
-    ldi     R21,OUTER180_BREAKSPEED
-    ldi     R22,0x00
-    ldi     R23,0x00
-    ldi     R24,0x00
-    rjmp    BREAKWAITLOOP
-    
-    BREAKWAITLOOP:
-        CALL    GETSPEEDTIME
-        CALL    CALCSPEED
-        cp      R20,R15
-        cpc     R21,R16
-        cpc     R22,R17
-        cpc     R23,R18
-        cpc     R24,R19
-        brsh    BREAKWAITLOOP
-    
-    CALL UNBRAKE
-        
-BREAKWAITEND:
-    pop     R25
-    pop     R24
-    pop     R23
-    pop     R22
-    pop     R21
-    pop     R20
-    pop     R19
-    pop     R18
-    pop     R17
-    pop     R16
-    pop     R15
-ret
-
-
 ;###################################
 ;#########CALCBREAKTIME#############
 ;###################################
@@ -802,6 +687,97 @@ SAVEMOTOR: ;//Saves the current motor counter and a number in R19 to ram.
     pop         R22
 
 ret
+
+;##############################################
+;####################BREAKWAIT#################
+;##############################################
+
+
+BREAKWAIT: ;//Break untill the car got a specified speed
+    push R15
+    push R16
+    push R17
+    push R18
+    push R19
+    push R20
+    push R21
+    push R22
+    push R23
+    push R24
+    push R25
+    CALL BRAKE
+            
+            cpi         R25,INNER45
+            brne        PC+2
+            ldi         R21,INNER45_BRAKESPEED
+            
+            cpi         R25,INNER90
+            brne        PC+2
+            ldi         R21,INNER90_BRAKESPEED
+            
+            cpi         R25,INNER135
+            brne        PC+2
+            ldi         R21,INNER135_BRAKESPEED
+            
+            cpi         R25,INNER180
+            brne        PC+2
+            ldi         R21,INNER180_BRAKESPEED
+            
+            cpi         R25,OUTER45
+            brne        PC+2
+            ldi         R21,OUTER45_BRAKESPEED
+            
+            cpi         R25,OUTER90
+            brne        PC+2
+            ldi         R21,OUTER90_BRAKESPEED
+            
+            cpi         R25,OUTER135
+            brne        PC+2
+            ldi         R21,OUTER135_BRAKESPEED
+            
+            cpi         R25,OUTER180
+            brne        PC+2
+            ldi         R21,OUTER180_BRAKESPEED
+        ldi R20,0x00
+        ldi R22,0x00
+        ldi R23,0x00
+        ldi R24,0x00
+    BREAKWAITLOOP:
+    
+        CALL CALCSPEED
+        cp R20,R15
+        cpc R21,R16
+        cpc R22,R17
+        cpc R23,R18
+        cpc R24,R19
+        brsh BREAKWAITLOOP
+        
+        CALL            DELAY
+        CALL CALCSPEED
+        cp R20,R15
+        cpc R21,R16
+        cpc R22,R17
+        cpc R23,R18
+        cpc R24,R19
+        brsh BREAKWAITLOOP
+    
+    CALL UNBRAKE
+        
+BREAKWAITEND:
+    pop R25
+    pop R24
+    pop R23
+    pop R22
+    pop R21
+    pop R20
+    pop R19
+    pop R18
+    pop R17
+    pop R16
+    pop R15
+ret
+
+
 ;##############################################
 ;###############SOONTURN#######################
 ;##############################################
@@ -818,18 +794,74 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R18
     push R19
     push R23
-    push R16
+    push R24
+    push R25
     ldi R23,0xff
     out OCR0,R23
-   
-    LD  R16,Z 
+    ldi R24,0x00
+    out OCR2,R24
+    
+    LD  R25,Z
     CALL BREAKWAIT
+    LD  R25,Z
     
     
-
+            cpi         R25,INNER45
+            brne        PC+6
+            ldi         R24,TURNSPEED_INNER45
+            ldi         R23,TURNOUT_INNER45
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,INNER90
+            brne        PC+6
+            ldi         R24,TURNSPEED_INNER90
+            ldi         R23,TURNOUT_INNER90
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,INNER135
+            brne        PC+6
+            ldi         R24,TURNSPEED_INNER135
+            ldi         R23,TURNOUT_INNER135
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,INNER180
+            brne        PC+6
+            ldi         R24,TURNSPEED_INNER180
+            ldi         R23,TURNOUT_INNER180
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,OUTER45
+            brne        PC+6
+            ldi         R24,TURNSPEED_INNER45
+            ldi         R23,TURNOUT_INNER45
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,OUTER90
+            brne        PC+6
+            ldi         R24,TURNSPEED_OUTER90
+            ldi         R23,TURNOUT_OUTER90
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,OUTER135
+            brne        PC+6
+            ldi         R24,TURNSPEED_OUTER135
+            ldi         R23,TURNOUT_OUTER135
+            rjmp        ENDTURN_PARAM_SET
+            
+            cpi         R25,OUTER180
+            brne        PC+4
+            ldi         R24,TURNSPEED_INNER180
+            ldi         R23,TURNOUT_INNER180
+            
+            
+    ENDTURN_PARAM_SET:
+    sts TransMsg,R23
+    sts TransMsg+1,R24
+    ldi R16,2
+    sts TransNum,R16
+    CALL TRANSREPLY
     TurnLoop:
-        ldi R16,TURNSPEED
-        out OCR2,R16
+        out OCR2,R24
         
         lds R22,MotorSensorCount1
         lds R21,MotorSensorCount2
@@ -837,15 +869,13 @@ SOONTURN: ;//Prepare for the turn in a sec
         push ZL
         push ZH
 
-        LD R16,Z+ ;//ignore turntype atm
-                              ;Read in MotorCounter at next turn
+        LD R16,Z+ 
         LD R18,Z+
         LD R17,Z+
         LD R16,Z+
         pop ZH
         pop ZL
         
-        ldi R23,TURNENDPREV
         ldi R19,0x00
         SUB R22,R23
         SBC R21,R19
@@ -862,6 +892,8 @@ SOONTURN: ;//Prepare for the turn in a sec
     ADIW ZL,4
     sts LanePointerL,ZL
     sts LanePointerH,ZH
+    pop R25
+    pop R24
     pop R23
     pop R19
     pop R18
@@ -873,6 +905,7 @@ SOONTURN: ;//Prepare for the turn in a sec
     pop ZL
     pop R16
 ret
+
 
 
 

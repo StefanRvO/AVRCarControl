@@ -133,10 +133,10 @@ CALCSPEED: ;//Calculate tihe time between the two most recent motor events
     sbc    R18,R11
     sbc    R19,R10
     
-    pop     R10
-    pop     R11
-    pop     R12
-    pop     R13
     pop     R14
+    pop     R13
+    pop     R12
+    pop     R11
+    pop     R10
 ret
     
