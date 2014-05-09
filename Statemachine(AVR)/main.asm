@@ -168,8 +168,8 @@ INT1_ISR: ;//Line sensor...
     lds         R16,AutoModeState
     cpi         R16,0x0f
     breq        AutoStateChange
-    ;cpi         R16,0x10
-    ;breq        AutoStateChange
+    cpi         R16,0x10
+    breq        AutoStateChange
     cpi         R16,0x11
     breq        AutoStateChange
     rjmp        ENDAutoStateChange
