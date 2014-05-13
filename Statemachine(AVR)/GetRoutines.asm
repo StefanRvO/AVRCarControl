@@ -295,12 +295,10 @@ GETSPEEDTIME:
     push    ZL
     push    ZH
     
-    CALL CALCSPEED
-    
     
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
     ldi         ZL,low(TransMSG)
-    
+    CALL        CALCSPEED
 ;    ST          Z+,R19
 ;    ST          Z+,R18
     ST          Z+,R17
@@ -354,3 +352,4 @@ TRANSREPLY:  ;Sends the data in R20:R21 (header), followed by data starting from
     pop         ZH
     pop         ZL
 RET
+

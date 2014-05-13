@@ -15,9 +15,10 @@
 .equ        LanePointerENDL=0x076
 .equ        TurnCount=0x077
 .equ        MotorTime1=0x078 ;Five bytes long
-.equ        MotorTime2=0x07D ; Five bytes long
-.equ        Readings=0x082 ; Here we put in our ADC readings //Alocate 256 bytes
-.equ        CarLane =0x182 ; Here we put  the mapping
+.equ        MotorTime2=0x07e ; Five bytes long
+.equ        MotorDiff=0x085
+.equ        Readings=0x095 ; Here we put in our ADC readings //Alocate 256 bytes
+.equ        CarLane =0x195 ; Here we put  the mapping
 
 .equ        BUFFERSIZE=32
 .equ        ACCELADJUST=1
@@ -54,7 +55,6 @@ T1_OVFLW:
     lds         R16,T1_Counter2
     inc         R16
     sts         T1_Counter2,R16
-    ;out        PORTB,R16 ;Debugger
     BRNE        T1_OVFLW_END
     lds         R16,T1_Counter3
     inc         R16
@@ -71,6 +71,7 @@ reti
 ;***********INT0,MOTOR SENSOR
 ;******************
 INT0_ISR:
+    push        R15
     push        R16
     in          R16,SREG
     push        R16
@@ -134,8 +135,6 @@ INT0_ISR:
     sts     MotorTime2+2,R16
     sts     MotorTime2+3,R21
     sts     MotorTime2+4,R20
-    
-    
     ;lds         R20,AutoModeState ;;//This is experimental
     ;cpi         R20,0x11
     ;brne        INT0END
@@ -152,6 +151,7 @@ INT0_ISR:
     pop         R16
     out         SREG,R16
     pop         R16
+    pop         R15
 RETI
 
 INT1_ISR: ;//Line sensor...
@@ -196,6 +196,7 @@ INT1_ISR: ;//Line sensor...
     ldi 	    R16,0x00
     sts         MotorSensorCount1,R16
     sts         MotorSensorCount2,R16
+    ldi         R16,0x01
     sts         MotorSensorCount3,R16
     ;CALL        DELAY
     ;CALL        BRAKELOOP
@@ -345,6 +346,11 @@ sts AutoModeState,R16
 ;inc R18
 ;out OCR0,R18
 ;CALL DELAY
+in      R18,OCR2
+cpi     R18,0x00
+breq    PC+4
+CALL        GETSPEEDTIME
+CALL        GETMOTORCOUNTER
 RJMP        MainLoop
 
 
@@ -379,6 +385,7 @@ DELAY:
     pop R18
     pop R17
 ret
+
 
 
 

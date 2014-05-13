@@ -13,6 +13,7 @@
 .equ        INNER180=0x08
 
 .equ        TURNSPEED=0x90
+
 .equ        INNER45_90=75
 .equ        INNER90_135=103
 .equ        INNER135_180=137
@@ -23,27 +24,27 @@
 
 .equ        INNER45_BRAKESPEED=0xff
 .equ        INNER90_BRAKESPEED=0xff
-.equ        INNER135_BRAKESPEED=0xFF
-.equ        INNER180_BRAKESPEED=0xFF
+.equ        INNER135_BRAKESPEED=0xFf
+.equ        INNER180_BRAKESPEED=0xFf
 
 .equ        OUTER45_BRAKESPEED=0xff
-.equ        OUTER90_BRAKESPEED=0xFF
-.equ        OUTER135_BRAKESPEED=0xFF
-.equ        OUTER180_BRAKESPEED=0xFF
+.equ        OUTER90_BRAKESPEED=0xFf
+.equ        OUTER135_BRAKESPEED=0xff
+.equ        OUTER180_BRAKESPEED=0xff
 
-.equ        BRAKELENGHT_INNER45=140
-.equ        BRAKELENGHT_INNER90=150
-.equ        BRAKELENGHT_INNER135=140
-.equ        BRAKELENGHT_INNER180=140
+.equ        BRAKELENGHT_INNER45=200
+.equ        BRAKELENGHT_INNER90=200
+.equ        BRAKELENGHT_INNER135=200
+.equ        BRAKELENGHT_INNER180=200
 
-.equ        BRAKELENGHT_OUTER45=140
-.equ        BRAKELENGHT_OUTER90=140
-.equ        BRAKELENGHT_OUTER135=140
-.equ        BRAKELENGHT_OUTER180=140
+.equ        BRAKELENGHT_OUTER45=200
+.equ        BRAKELENGHT_OUTER90=200
+.equ        BRAKELENGHT_OUTER135=200
+.equ        BRAKELENGHT_OUTER180=200
 
 
 .equ        TURNSPEED_INNER45=0x6f
-.equ        TURNSPEED_INNER90=0x9f
+.equ        TURNSPEED_INNER90=0x6f
 .equ        TURNSPEED_INNER135=0x6f
 .equ        TURNSPEED_INNER180=0x6f
 
@@ -70,6 +71,7 @@
 .equ        TURNENDPREV=0
 
 .equ        MAPPINGSPEED=0x8f
+.equ        MAGSTRENGHT=0xff
 
 
 
@@ -264,7 +266,7 @@ DRIVE:
             lds         ZH,LanePointerH
             lds         ZL,LanePointerL
 
-            LD          R24,Z+ ;//ignore turntype atm
+            LD          R24,Z+
                               ;Read in MotorCounter at next turn
             LD          R18,Z+
             LD          R17,Z+
@@ -303,15 +305,16 @@ DRIVE:
             brne        PC+2
             ldi         R25,BRAKELENGHT_OUTER180
             
-            ldi         R19,0x00
-            add         R22,R25
-            adc         R21,R19
-            adc         R20,R19
-
+            ldi         R19,0x00        ;Correct for bug if turn is to close to line
+            sub         R18,R25
+            sbc         R17,R19
+            sbc         R16,R19
+            
                             ;Check if the numbers is equal
             cp      R22,R18
             cpc     R21,R17
             cpc     R20,R16
+            
             brlo    DRIVELOOP
             
             CALL    BRAKE
@@ -796,7 +799,7 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R23
     push R24
     push R25
-    ldi R23,0xff
+    ldi R23,MAGSTRENGHT
     out OCR0,R23
     ldi R24,0x00
     out OCR2,R24
@@ -807,59 +810,70 @@ SOONTURN: ;//Prepare for the turn in a sec
     
     
             cpi         R25,INNER45
-            brne        PC+6
+            breq        SETTURNPARAM1
+            
+            cpi         R25,INNER90
+            breq        SETTURNPARAM2
+            
+            cpi         R25,INNER135
+            breq        SETTURNPARAM3
+            
+            cpi         R25,INNER180
+            breq        SETTURNPARAM4
+            
+            cpi         R25,OUTER45
+            breq        SETTURNPARAM5
+            
+            cpi         R25,OUTER90
+            breq        SETTURNPARAM6
+            
+            cpi         R25,OUTER135
+            breq        SETTURNPARAM7
+            
+            cpi         R25,OUTER180
+            breq        SETTURNPARAM8
+            
+            
+            SETTURNPARAM1:
             ldi         R24,TURNSPEED_INNER45
             ldi         R23,TURNOUT_INNER45
             rjmp        ENDTURN_PARAM_SET
             
-            cpi         R25,INNER90
-            brne        PC+6
+            SETTURNPARAM2:
             ldi         R24,TURNSPEED_INNER90
             ldi         R23,TURNOUT_INNER90
             rjmp        ENDTURN_PARAM_SET
             
-            cpi         R25,INNER135
-            brne        PC+6
+            SETTURNPARAM3:
             ldi         R24,TURNSPEED_INNER135
             ldi         R23,TURNOUT_INNER135
             rjmp        ENDTURN_PARAM_SET
             
-            cpi         R25,INNER180
-            brne        PC+6
+            SETTURNPARAM4:
             ldi         R24,TURNSPEED_INNER180
             ldi         R23,TURNOUT_INNER180
             rjmp        ENDTURN_PARAM_SET
             
-            cpi         R25,OUTER45
-            brne        PC+6
-            ldi         R24,TURNSPEED_INNER45
-            ldi         R23,TURNOUT_INNER45
-            rjmp        ENDTURN_PARAM_SET
-            
-            cpi         R25,OUTER90
-            brne        PC+6
+            SETTURNPARAM5:
+            ldi         R24,TURNSPEED_OUTER45
+            ldi         R23,TURNOUT_OUTER45
+            rjmp        ENDTURN_PARAM_SET            
+
+            SETTURNPARAM6:
             ldi         R24,TURNSPEED_OUTER90
             ldi         R23,TURNOUT_OUTER90
             rjmp        ENDTURN_PARAM_SET
             
-            cpi         R25,OUTER135
-            brne        PC+6
+            SETTURNPARAM7:
             ldi         R24,TURNSPEED_OUTER135
             ldi         R23,TURNOUT_OUTER135
             rjmp        ENDTURN_PARAM_SET
             
-            cpi         R25,OUTER180
-            brne        PC+4
-            ldi         R24,TURNSPEED_INNER180
-            ldi         R23,TURNOUT_INNER180
-            
+            SETTURNPARAM8:
+            ldi         R24,TURNSPEED_OUTER180
+            ldi         R23,TURNOUT_OUTER180
             
     ENDTURN_PARAM_SET:
-    sts TransMsg,R23
-    sts TransMsg+1,R24
-    ldi R16,2
-    sts TransNum,R16
-    CALL TRANSREPLY
     TurnLoop:
         out OCR2,R24
         
@@ -876,10 +890,12 @@ SOONTURN: ;//Prepare for the turn in a sec
         pop ZH
         pop ZL
         
-        ldi R19,0x00
-        SUB R22,R23
-        SBC R21,R19
-        SBC R20,R19
+        
+          
+        ldi         R19,0x00        ;Correct for bug if turn is to close to line
+        sub         R18,R23
+        sbc         R17,R19
+        sbc         R16,R19
                            ;Check if the numbers is equal
         cp R22,R18
         cpc R21,R17
