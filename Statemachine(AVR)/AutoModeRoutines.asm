@@ -10,7 +10,7 @@
 ;INNER90
 ;INNER135
 ;INNER180
-
+.equ        Startoffset=10 ;(-)
 
 .equ        OUTER45=0x01
 .equ        OUTER90=0x02
@@ -31,33 +31,36 @@
 .equ        OUTER90_135=129
 .equ        OUTER135_180=159
 
-.equ        INNER45_BRAKESPEED=0xA3
+.equ        INNER45_BRAKESPEED=0xAA
 .equ        INNER90_BRAKESPEED=0xC0
 .equ        INNER135_BRAKESPEED=0xBC
 .equ        INNER180_BRAKESPEED=0xC5
 
-.equ        OUTER45_BRAKESPEED=0xA0
+.equ        OUTER45_BRAKESPEED=0xA8
 .equ        OUTER90_BRAKESPEED=0xC0
 .equ        OUTER135_BRAKESPEED=0xBB
 .equ        OUTER180_BRAKESPEED=0xC8
 
-.equ        BRAKELENGHT_INNER45=70
-.equ        BRAKELENGHT_INNER90=85
+
+
+
+.equ        BRAKELENGHT_INNER45=80
+.equ        BRAKELENGHT_INNER90=88
 .equ        BRAKELENGHT_INNER135=80
 .equ        BRAKELENGHT_INNER180=82
 
-.equ        BRAKELENGHT_OUTER45=70
+.equ        BRAKELENGHT_OUTER45=80
 .equ        BRAKELENGHT_OUTER90=90
 .equ        BRAKELENGHT_OUTER135=85
 .equ        BRAKELENGHT_OUTER180=90
 
 
-.equ        TURNSPEED_INNER45=0xcf
+.equ        TURNSPEED_INNER45=0xc7
 .equ        TURNSPEED_INNER90=0xa5
 .equ        TURNSPEED_INNER135=0xab
 .equ        TURNSPEED_INNER180=0xa0
 
-.equ        TURNSPEED_OUTER45=0xcf
+.equ        TURNSPEED_OUTER45=0xc0
 .equ        TURNSPEED_OUTER90=0xa5
 .equ        TURNSPEED_OUTER135=0xb9
 .equ        TURNSPEED_OUTER180=0xa0
@@ -284,35 +287,38 @@ DRIVE:
 
             cpi         R24,INNER45
             brne        PC+2
-            ldi         R25,BRAKELENGHT_INNER45
+            ldi         R25,BRAKELENGHT_INNER45+Startoffset
             
             cpi         R24,INNER90
             brne        PC+2
-            ldi         R25,BRAKELENGHT_INNER90
+            ldi         R25,BRAKELENGHT_INNER90+Startoffset
             
             cpi         R24,INNER135
             brne        PC+2
-            ldi         R25,BRAKELENGHT_INNER135
+            ldi         R25,BRAKELENGHT_INNER135+startoffset
             
             cpi         R24,INNER180
             brne        PC+2
-            ldi         R25,BRAKELENGHT_INNER180
+            ldi         R25,BRAKELENGHT_INNER180+startoffset
             
             cpi         R24,OUTER45
             brne        PC+2
-            ldi         R25,BRAKELENGHT_OUTER45
+            ldi         R25,BRAKELENGHT_OUTER45+startoffset
             
             cpi         R24,OUTER90
             brne        PC+2
-            ldi         R25,BRAKELENGHT_OUTER90
+            ldi         R25,BRAKELENGHT_OUTER90+startoffset
             
             cpi         R24,OUTER135
             brne        PC+2
-            ldi         R25,BRAKELENGHT_OUTER135
+            ldi         R25,BRAKELENGHT_OUTER135+startoffset
             
             cpi         R24,OUTER180
             brne        PC+2
-            ldi         R25,BRAKELENGHT_OUTER180
+            ldi         R25,BRAKELENGHT_OUTER180+startoffset
+            
+            lds         R19,LapCounter
+            sub         R25,R19
             
             ldi         R19,0x00        ;Correct for bug if turn is to close to line
             sub         R18,R25
@@ -721,35 +727,38 @@ BREAKWAIT: ;//Break untill the car got a specified speed
             
             cpi         R25,INNER45
             brne        PC+2
-            ldi         R21,INNER45_BRAKESPEED
+            ldi         R21,INNER45_BRAKESPEED+Startoffset
             
             cpi         R25,INNER90
             brne        PC+2
-            ldi         R21,INNER90_BRAKESPEED
+            ldi         R21,INNER90_BRAKESPEED+Startoffset
             
             cpi         R25,INNER135
             brne        PC+2
-            ldi         R21,INNER135_BRAKESPEED
+            ldi         R21,INNER135_BRAKESPEED+Startoffset
             
             cpi         R25,INNER180
             brne        PC+2
-            ldi         R21,INNER180_BRAKESPEED
+            ldi         R21,INNER180_BRAKESPEED+Startoffset
             
             cpi         R25,OUTER45
             brne        PC+2
-            ldi         R21,OUTER45_BRAKESPEED
+            ldi         R21,OUTER45_BRAKESPEED+Startoffset
             
             cpi         R25,OUTER90
             brne        PC+2
-            ldi         R21,OUTER90_BRAKESPEED
+            ldi         R21,OUTER90_BRAKESPEED+Startoffset
             
             cpi         R25,OUTER135
             brne        PC+2
-            ldi         R21,OUTER135_BRAKESPEED
+            ldi         R21,OUTER135_BRAKESPEED+Startoffset
             
             cpi         R25,OUTER180
             brne        PC+2
-            ldi         R21,OUTER180_BRAKESPEED
+            ldi         R21,OUTER180_BRAKESPEED+Startoffset
+        
+        lds R20,LapCounter
+        sub R21,R20
         ldi R20,0x00
         ldi R22,0x00
         ldi R23,0x00
@@ -844,45 +853,48 @@ SOONTURN: ;//Prepare for the turn in a sec
             
             
             SETTURNPARAM1:
-            ldi         R24,TURNSPEED_INNER45
-            ldi         R23,TURNOUT_INNER45
+            ldi         R24,TURNSPEED_INNER45-Startoffset
+            ldi         R23,TURNOUT_INNER45-Startoffset
             rjmp        ENDTURN_PARAM_SET
             
             SETTURNPARAM2:
-            ldi         R24,TURNSPEED_INNER90
-            ldi         R23,TURNOUT_INNER90
+            ldi         R24,TURNSPEED_INNER90-Startoffset
+            ldi         R23,TURNOUT_INNER90-Startoffset
             rjmp        ENDTURN_PARAM_SET
             
             SETTURNPARAM3:
-            ldi         R24,TURNSPEED_INNER135
-            ldi         R23,TURNOUT_INNER135
+            ldi         R24,TURNSPEED_INNER135-Startoffset
+            ldi         R23,TURNOUT_INNER135-Startoffset
             rjmp        ENDTURN_PARAM_SET
             
             SETTURNPARAM4:
-            ldi         R24,TURNSPEED_INNER180
-            ldi         R23,TURNOUT_INNER180
+            ldi         R24,TURNSPEED_INNER180-Startoffset
+            ldi         R23,TURNOUT_INNER180-Startoffset
             rjmp        ENDTURN_PARAM_SET
             
             SETTURNPARAM5:
-            ldi         R24,TURNSPEED_OUTER45
-            ldi         R23,TURNOUT_OUTER45
+            ldi         R24,TURNSPEED_OUTER45-Startoffset
+            ldi         R23,TURNOUT_OUTER45-Startoffset
             rjmp        ENDTURN_PARAM_SET            
 
             SETTURNPARAM6:
-            ldi         R24,TURNSPEED_OUTER90
-            ldi         R23,TURNOUT_OUTER90
+            ldi         R24,TURNSPEED_OUTER90-Startoffset
+            ldi         R23,TURNOUT_OUTER90-Startoffset
             rjmp        ENDTURN_PARAM_SET
             
             SETTURNPARAM7:
-            ldi         R24,TURNSPEED_OUTER135
-            ldi         R23,TURNOUT_OUTER135
+            ldi         R24,TURNSPEED_OUTER135-Startoffset
+            ldi         R23,TURNOUT_OUTER135-Startoffset
             rjmp        ENDTURN_PARAM_SET
             
             SETTURNPARAM8:
-            ldi         R24,TURNSPEED_OUTER180
-            ldi         R23,TURNOUT_OUTER180
+            ldi         R24,TURNSPEED_OUTER180-Startoffset
+            ldi         R23,TURNOUT_OUTER180-Startoffset
             
     ENDTURN_PARAM_SET:
+    lds R22,Lapcounter
+    add R23,R22
+    add R24,R22
     TurnLoop:
         out OCR2,R24
         

@@ -16,7 +16,7 @@
 .equ        TurnCount=0x077
 .equ        MotorTime1=0x078 ;Five bytes long
 .equ        MotorTime2=0x07e ; Five bytes long
-.equ        MotorDiff=0x085
+.equ        LapCounter=0x085
 .equ        Readings=0x095 ; Here we put in our ADC readings //Alocate 256 bytes
 .equ        CarLane =0x195 ; Here we put  the mapping
 
@@ -176,6 +176,16 @@ INT1_ISR: ;//Line sensor...
     AutoStateChange:
     inc         R16
     sts         AutoModeState,R16
+    cpi         R16,0x10
+    breq        ResetLapCounter
+    
+    lds         R16,LapCounter
+    inc         R16
+    sts         LapCounter,R16
+    rjmp        ENDAutoStateChange
+    ResetLapCounter:
+    ldi         R16,0x00
+    sts         LapCounter,R16
     
     ;lds         R20,MotorSensorCount1
     ;lds         R21,MotorSensorCount2
