@@ -2,6 +2,16 @@
 
 
 
+;OUTER45
+;OUTER90
+;OUTER135
+;OUTER180
+;INNER45
+;INNER90
+;INNER135
+;INNER180
+
+
 .equ        OUTER45=0x01
 .equ        OUTER90=0x02
 .equ        OUTER135=0x03
@@ -12,7 +22,6 @@
 .equ        INNER135=0x07
 .equ        INNER180=0x08
 
-.equ        TURNSPEED=0x90
 
 .equ        INNER45_90=75
 .equ        INNER90_135=103
@@ -22,47 +31,47 @@
 .equ        OUTER90_135=129
 .equ        OUTER135_180=159
 
-.equ        INNER45_BRAKESPEED=0xff
-.equ        INNER90_BRAKESPEED=0xff
-.equ        INNER135_BRAKESPEED=0xFf
-.equ        INNER180_BRAKESPEED=0xFf
+.equ        INNER45_BRAKESPEED=0xA3
+.equ        INNER90_BRAKESPEED=0xC0
+.equ        INNER135_BRAKESPEED=0xBC
+.equ        INNER180_BRAKESPEED=0xC5
 
-.equ        OUTER45_BRAKESPEED=0xff
-.equ        OUTER90_BRAKESPEED=0xFf
-.equ        OUTER135_BRAKESPEED=0xff
-.equ        OUTER180_BRAKESPEED=0xff
+.equ        OUTER45_BRAKESPEED=0xA0
+.equ        OUTER90_BRAKESPEED=0xC0
+.equ        OUTER135_BRAKESPEED=0xBB
+.equ        OUTER180_BRAKESPEED=0xC8
 
-.equ        BRAKELENGHT_INNER45=200
-.equ        BRAKELENGHT_INNER90=200
-.equ        BRAKELENGHT_INNER135=200
-.equ        BRAKELENGHT_INNER180=200
+.equ        BRAKELENGHT_INNER45=70
+.equ        BRAKELENGHT_INNER90=85
+.equ        BRAKELENGHT_INNER135=80
+.equ        BRAKELENGHT_INNER180=82
 
-.equ        BRAKELENGHT_OUTER45=200
-.equ        BRAKELENGHT_OUTER90=200
-.equ        BRAKELENGHT_OUTER135=200
-.equ        BRAKELENGHT_OUTER180=200
-
-
-.equ        TURNSPEED_INNER45=0x6f
-.equ        TURNSPEED_INNER90=0x6f
-.equ        TURNSPEED_INNER135=0x6f
-.equ        TURNSPEED_INNER180=0x6f
-
-.equ        TURNSPEED_OUTER45=0x6f
-.equ        TURNSPEED_OUTER90=0x6f
-.equ        TURNSPEED_OUTER135=0x6f
-.equ        TURNSPEED_OUTER180=0x6f
+.equ        BRAKELENGHT_OUTER45=70
+.equ        BRAKELENGHT_OUTER90=90
+.equ        BRAKELENGHT_OUTER135=85
+.equ        BRAKELENGHT_OUTER180=90
 
 
-.equ        TURNOUT_INNER45=20
-.equ        TURNOUT_INNER90=20
-.equ        TURNOUT_INNER135=20
-.equ        TURNOUT_INNER180=20
+.equ        TURNSPEED_INNER45=0xcf
+.equ        TURNSPEED_INNER90=0xa5
+.equ        TURNSPEED_INNER135=0xab
+.equ        TURNSPEED_INNER180=0xa0
 
-.equ        TURNOUT_OUTER45=20
-.equ        TURNOUT_OUTER90=20
-.equ        TURNOUT_OUTER135=20
-.equ        TURNOUT_OUTER180=20
+.equ        TURNSPEED_OUTER45=0xcf
+.equ        TURNSPEED_OUTER90=0xa5
+.equ        TURNSPEED_OUTER135=0xb9
+.equ        TURNSPEED_OUTER180=0xa0
+
+
+.equ        TURNOUT_INNER45=40
+.equ        TURNOUT_INNER90=65
+.equ        TURNOUT_INNER135=70
+.equ        TURNOUT_INNER180=70
+
+.equ        TURNOUT_OUTER45=40
+.equ        TURNOUT_OUTER90=80
+.equ        TURNOUT_OUTER135=70
+.equ        TURNOUT_OUTER180=80
 
 .equ        TURNMAG=7
 .equ        TURNMAGOUT=TURNMAG-2
@@ -114,7 +123,7 @@ AUTOMODE:
         jmp AutoModeLoop
         
     AUTOMODE0:
-        ldi R16,MAPPINGSPEED
+        ldi R16,MAPPINGSPEED-0x1a
         out OCR2,R16
         jmp AutoModeLoop
         
