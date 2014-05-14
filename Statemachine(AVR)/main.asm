@@ -163,8 +163,19 @@ INT1_ISR: ;//Line sensor...
     push        R22
     push        ZL
     push        ZH
-    CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
-    ;CALL	    GETTIME
+    ;CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
+    CALL	    GETTIME
+        ;ResetTime
+        ldi     R16,0x00
+        sts     T1_Counter1,R16
+        sts     T1_Counter2,R16
+        sts     T1_Counter3,R16
+        out          TCNT1H,R16
+        out          TCNT1L,R16
+       
+    
+    
+    
     lds         R16,AutoModeState
     cpi         R16,0x0f
     breq        AutoStateChange

@@ -31,9 +31,9 @@
 .equ        OUTER90_135=129
 .equ        OUTER135_180=159
 
-.equ        INNER45_BRAKESPEED=0xAA
+.equ        INNER45_BRAKESPEED=0xB0
 .equ        INNER90_BRAKESPEED=0xC0
-.equ        INNER135_BRAKESPEED=0xBC
+.equ        INNER135_BRAKESPEED=0xBE
 .equ        INNER180_BRAKESPEED=0xC5
 
 .equ        OUTER45_BRAKESPEED=0xA8
@@ -441,7 +441,7 @@ LEFTSWINGSEND:
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
-    CALL        SWINGPING
+    ;CALL        SWINGPING
 
     pop         ZH
     pop         ZL
@@ -550,7 +550,7 @@ RIGHTSWINGSEND:
     sts         LanePointerH,ZH
     sts         LanePointerL,ZL
 
-    CALL        SWINGPING
+    ;CALL        SWINGPING
 
     pop         ZH
     pop         ZL
