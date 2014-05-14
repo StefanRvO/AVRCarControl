@@ -336,8 +336,12 @@ GET:
 
 ;***************
 SETMAG:
-
-    out OCR0,R18
+    cpi R18,0xff
+    brne PC+2
+    SBI PORTB,3
+    cpi R18,0x00
+    brne PC+2
+    cbi PORTB,3
     ret
 
 

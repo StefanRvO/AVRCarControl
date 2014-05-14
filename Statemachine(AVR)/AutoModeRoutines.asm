@@ -10,7 +10,7 @@
 ;INNER90
 ;INNER135
 ;INNER180
-.equ        Startoffset=10 ;(-)
+.equ        Startoffset=15 ;(-)
 
 .equ        OUTER45=0x01
 .equ        OUTER90=0x02
@@ -270,8 +270,7 @@ DRIVE:
                     ;Set speed to 80
             ldi         R16,0xff
             out         OCR2,R16
-            ldi         R16,0x00
-            out         OCR0,R16
+            CBI         PORTB,3
             lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
             lds         R20,MotorSensorCount3
@@ -817,8 +816,7 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R23
     push R24
     push R25
-    ldi R23,MAGSTRENGHT
-    out OCR0,R23
+    SBI PORTB,3
     ldi R24,0x00
     out OCR2,R24
     
