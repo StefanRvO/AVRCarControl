@@ -10,7 +10,7 @@
 ;INNER90
 ;INNER135
 ;INNER180
-.equ        Startoffset=15 ;(-)
+.equ        Startoffset=0 ;(-)
 
 .equ        OUTER45=0x01
 .equ        OUTER90=0x02

@@ -30,6 +30,27 @@ ret
 ;###################################################
 
 GETSTOP:
+push R20
+push R21
+
+in  R20,OCR2
+cpi R20,0x00
+brne PC+4
+ldi  R20,0x01
+rjmp SENDSTOP
+ldi R20,0x00
+SENDSTOP:
+sts TransMSG,R20
+ldi R21,1
+sts TransNUM,R21
+ldi R20,0xbb
+ldi R21,0x11
+
+CALL TRANSREPLY
+
+pop R21
+pop R20
+
 ret
 ;###################################################
 ;##################GETAUTOMODE######################
@@ -42,7 +63,7 @@ GETAUTOMODE:
     sts     TransMSG,R19
     ldi     R19,1
     sts     TransNum,R19
-    ldi     R20,0xaa
+    ldi     R20,0xbb
     ldi     R21,0x12
     CALL    TRANSREPLY
     pop     R21
@@ -64,7 +85,7 @@ GETACCEL:
     ldi         R20,1        ;
     sts         TransNum,R20          ;
     ldi         R20,0xBB ;Response headers
-    ldi         R21,0x14
+    ldi         R21,0x15
     CALL        TRANSREPLY
     pop         R21
     pop         R20
@@ -172,7 +193,7 @@ SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     ldi         R20,4
     sts         TransNum,R20
     ldi         R20,0xBB ;Respond header
-    ldi         R21,0x17
+    ldi         R21,0x14
     CALL        TRANSREPLY
     pop         ZH
     pop         ZL
@@ -270,7 +291,7 @@ GETMOTORCOUNTER: ;Send the motor counter
     ldi         R20,3
     sts         TransNum,R20
     ldi         R20,0xBB ;Respond header
-    ldi         R21,0x15
+    ldi         R21,0x13
     call        TRANSREPLY
     pop         ZH
     pop         ZL
