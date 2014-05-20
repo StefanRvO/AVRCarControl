@@ -163,6 +163,17 @@ INT1_ISR: ;//Line sensor...
     push        R22
     push        ZL
     push        ZH
+    
+    lds         R16,MotorSensorCount1
+    lds         R20,MotorSensorCount2
+    lds         R21,MotorSensorCount3  ;Don't reset stuff if less than 5 motor interrupt since last time.
+    ldi         R22,0x00
+    cpi         R16,0x05
+    cpc         R20,R22
+    ldi         R22,0x01
+    cpc         R21,R22
+    brlo        ENDLINEINT
+    
     ;CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
     CALL	    GETTIME
         ;ResetTime
@@ -221,6 +232,7 @@ INT1_ISR: ;//Line sensor...
     sts         MotorSensorCount3,R16
     ;CALL        DELAY
     ;CALL        BRAKELOOP
+    ENDLINEINT:
     pop         ZH
     pop         ZL
     pop         R22
@@ -347,12 +359,7 @@ GET:
 
 ;***************
 SETMAG:
-    cpi R18,0xff
-    brne PC+2
-    SBI PORTB,3
-    cpi R18,0x00
-    brne PC+2
-    cbi PORTB,3
+    out OCR0,R18
     ret
 
 
@@ -371,11 +378,11 @@ sts AutoModeState,R16
 ;inc R18
 ;out OCR0,R18
 ;CALL DELAY
-in      R18,OCR2
-cpi     R18,0x00
-breq    PC+4
-CALL        GETSPEEDTIME
-CALL        GETMOTORCOUNTER
+;in      R18,OCR2
+;cpi     R18,0x00
+;breq    PC+4
+;CALL        GETSPEEDTIME
+;CALL        GETMOTORCOUNTER
 RJMP        MainLoop
 
 

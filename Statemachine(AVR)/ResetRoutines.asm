@@ -14,6 +14,7 @@
     sts T1_Counter3,R16  ;zero counter stuff
     sts MotorSensorCount1,R16 ;Clear motor counter
     sts MotorSensorCount2,R16 ;Clear motor counter
+    ldi R16,0x01
     sts MotorSensorCount3,R16 ;Clear motor counter
     sts AutoModeState,R16
     ldi R16,HIGH(CarLane)

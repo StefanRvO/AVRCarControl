@@ -83,7 +83,7 @@
 .equ        TURNENDPREV=0
 
 .equ        MAPPINGSPEED=0x8f
-.equ        MAGSTRENGHT=0xff
+.equ        MAGSTRENGHT=0xf8
 
 
 
@@ -270,7 +270,8 @@ DRIVE:
                     ;Set speed to 80
             ldi         R16,0xff
             out         OCR2,R16
-            CBI         PORTB,3
+            ldi         R16,0x00
+            out         OCR0,R16
             lds         R22,MotorSensorCount1
             lds         R21,MotorSensorCount2
             lds         R20,MotorSensorCount3
@@ -816,7 +817,8 @@ SOONTURN: ;//Prepare for the turn in a sec
     push R23
     push R24
     push R25
-    SBI PORTB,3
+    ldi  R16,MAGSTRENGHT
+    out OCR0,R16
     ldi R24,0x00
     out OCR2,R24
     
