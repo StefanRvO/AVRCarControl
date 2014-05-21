@@ -19,8 +19,8 @@ def GetData():
     #print recivedlist
     if recivedlist[1]==0x16:
         return ["speedtime",(recivedlist[2]<<16)+(recivedlist[3]<<8)+(recivedlist[4])]
-    elif recivedlist[1]==0x15:
-        return ["motorcount",(recivedlist[2]<<16)+(recivedlist[3]<<8)+(recivedlist[4])]
+    elif recivedlist[1]==0x17:
+        return ["motorcount",(recivedlist[2]<<24)+(recivedlist[3]<<16)+(recivedlist[4]<<8)]
     
         
         
@@ -42,6 +42,6 @@ while True:
     elif rec[0]== "motorcount":
         motorcount=rec[1]
     if counter%2==0:
-        print str(motorcount)+'\t'+str(speedtime)+'\n'
+        print str(motorcount/16000000.)+'\t'+str(speedtime/16000000.)+'\n'
         
     

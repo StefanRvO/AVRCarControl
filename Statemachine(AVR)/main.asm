@@ -251,17 +251,34 @@ RX_ISR: ;We always recive 3 bytes, put them in R16:R18
     push        R16
     push        R17
     push        R18
+    push        R19
+    push        R20
+    clr         R19
+    clr         R20
     in          R16,UDR ;read recived into R16
     ;wait for new byte
     RX_WAIT1:
+        inc         R19
+        brne        PC+4
+        inc         R20
+        breq        RX_ISR_END
         SBIS        UCSRA,RXC
         RJMP        RX_WAIT1
         in          R17,UDR     ;Read into R17
+        clr         R19
+        clr         R20
     RX_WAIT2:
+        inc         R19
+        brne        PC+4
+        inc         R20
+        breq        RX_ISR_END
         SBIS        UCSRA,RXC
         RJMP        RX_WAIT2
         in          R18,UDR   ;Read into R18
     CALL        STATESET
+    RX_ISR_END:
+    pop         R20
+    pop         R19
     pop         R18
     pop         R17
     pop         R16
@@ -381,8 +398,8 @@ sts AutoModeState,R16
 ;in      R18,OCR2
 ;cpi     R18,0x00
 ;breq    PC+4
+;CALL        GETTIME
 ;CALL        GETSPEEDTIME
-;CALL        GETMOTORCOUNTER
 RJMP        MainLoop
 
 
