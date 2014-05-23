@@ -175,14 +175,14 @@ INT1_ISR: ;//Line sensor...
     brlo        ENDLINEINT
     
     ;CALL 	    GETMOTORCOUNTER ;Print Out Motor counter
-    CALL	    GETTIME
+    ;CALL	    GETTIME
         ;ResetTime
-        ldi     R16,0x00
-        sts     T1_Counter1,R16
-        sts     T1_Counter2,R16
-        sts     T1_Counter3,R16
-        out          TCNT1H,R16
-        out          TCNT1L,R16
+        ;ldi     R16,0x00
+        ;sts     T1_Counter1,R16
+        ;sts     T1_Counter2,R16
+        ;sts     T1_Counter3,R16
+        ;out          TCNT1H,R16
+        ;out          TCNT1L,R16
        
     
     

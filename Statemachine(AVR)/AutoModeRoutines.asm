@@ -82,7 +82,7 @@
 .equ        BRAKELENGHT=160
 .equ        TURNENDPREV=0
 
-.equ        MAPPINGSPEED=0x8f
+.equ        MAPPINGSPEED=0x9f
 .equ        MAGSTRENGHT=0xf8
 
 

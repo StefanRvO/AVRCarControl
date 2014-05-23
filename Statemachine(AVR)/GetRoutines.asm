@@ -193,7 +193,7 @@ SWINGPING: ;//Send the motorcounter, Turncount, ZL, ZH
     ldi         R20,4
     sts         TransNum,R20
     ldi         R20,0xBB ;Respond header
-    ldi         R21,0x14
+    ldi         R21,0x17
     CALL        TRANSREPLY
     pop         ZH
     pop         ZL
@@ -257,7 +257,7 @@ GETTIME: ;Send the current time
     ldi         R20,5
     sts         TransNum,R20
     ldi         R20,0xBB ;Respond header
-    ldi         R21,0x17
+    ldi         R21,0x14
     CALL        TRANSREPLY
     pop         ZH
     pop         ZL

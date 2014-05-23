@@ -16,14 +16,14 @@ def GetData():
         while (serialport.inWaiting() > 0) and len(recivedlist)<6:
             recivedlist.append(ord(serialport.read(1)))
         if len(recivedlist)==5:
-            if recivedlist[1]==0x15:
+            if recivedlist[1]==0x13:
                 break
     #print recivedlist
-    if recivedlist[1]==0x15:
-        return ["mapend",(recivedlist[2]<<16)+(recivedlist[3]<<8)+(recivedlist[4])]
+    if recivedlist[1]==0x13:
+        return ["mapend",((recivedlist[2]-1)<<16)+(recivedlist[3]<<8)+(recivedlist[4])]
     elif recivedlist[1]==0x16:
         return ["speedtime",(recivedlist[2]<<16)+(recivedlist[3]<<8)+(recivedlist[4])]
-    elif recivedlist[1]==0x17:
+    elif recivedlist[1]==0x14:
         return ["swing",recivedlist[2],(recivedlist[3]<<16)+(recivedlist[4]<<8)+(recivedlist[5])]
     else:
         return [0,0,0,0,0]
@@ -44,6 +44,7 @@ while True:
     if recieved[0]=="mapend":
        #f.write('\t\n LAP'+str(recieved[1])+'\n')
        lapcounter+=1
+       counter=0
        print '\t\n LAP'+str(lapcounter)+'\t'+str(recieved[1])+'\n'
     elif recieved[0]=="speedtime":
         print "SPEED: "+str(recieved[1])
@@ -54,7 +55,7 @@ while True:
             recivedsecond=recieved[2]
             lenght=recivedsecond-recivedfirst
             #f.write(str(counter/2)+str(recieved[0]))
-            print str((counter/2)%4)+'\t'+str(lenght)+'\t'+str(recieved[1])
+            print str((counter/2))+'\t'+str(lenght)+'\t'+str(recieved[1])
         counter+=1
         
     
