@@ -46,7 +46,7 @@ def GetReading(LastReadings):
                 rawin = ord(serialport.read(1))
                 if len(reading)==0 and (not rawin==0xBB):
                     continue
-                if len(reading)==1 and (not rawin==0x14):
+                if len(reading)==1 and (not rawin==0x15):
                     reading=[]
                     continue
                 else:

@@ -282,6 +282,7 @@ GETMOTORCOUNTER: ;Send the motor counter
     lds         R22,MotorSensorCount1
     lds         R21,MotorSensorCount2
     lds         R20,MotorSensorCount3
+    dec         R20
     ;Put counter in TransMSG
     ldi	        ZH,high(TransMSG)	; make high byte of Z point at address of msg
     ldi         ZL,low(TransMSG)
